@@ -1,11 +1,28 @@
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Dimensions,
+  Image,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { Button, Card, Text, TextInput } from 'react-native-paper';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+// Import các utils và assets giống màn hình Login
+import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
 import { forgotPasswordAsync } from '@/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+
+// Đảm bảo đường dẫn ảnh đúng như cấu trúc dự án của bạn
+const bgImage = require('@/assets/images/login-background.png');
+const logoImage = require('@/assets/images/tikoSmart.png');
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function ForgetPasswordScreen() {
   const router = useRouter();
@@ -24,7 +41,7 @@ export default function ForgetPasswordScreen() {
       const res = await dispatch(forgotPasswordAsync(email.trim())).unwrap();
       Alert.alert(
         'Thành công',
-        res?.message || 'Đã gửi liên kết đặt lại mật khẩu đến email của bạn. Hãy mở email và bấm link để đặt lại.'
+        res?.message || 'Đã gửi liên kết đặt lại mật khẩu đến email. Vui lòng kiểm tra hộp thư.'
       );
       router.replace('/login');
     } catch (e: any) {
@@ -36,90 +53,188 @@ export default function ForgetPasswordScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.card}>
-        <ThemedText type="title" style={styles.title}>
-          Quên mật khẩu
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>Nhập email để nhận liên kết đặt lại mật khẩu</ThemedText>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* Background Image full màn hình */}
+      <ImageBackground
+        source={bgImage}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <View style={styles.overlay} />
 
-        <ThemedText style={styles.label}>Địa chỉ email</ThemedText>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          editable={!isLoading}
-          placeholder="abc@gmail.com"
-          style={styles.input}
-        />
-
-        <Pressable
-          onPress={onSubmit}
-          disabled={!canSubmit}
-          style={[styles.button, !canSubmit && styles.buttonDisabled]}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {isLoading ? (
-            <ActivityIndicator />
-          ) : (
-            <ThemedText style={styles.buttonText}>Xác nhận</ThemedText>
-          )}
-        </Pressable>
+          {/* Logo Section */}
+          <View style={styles.logoContainer}>
+            <View style={styles.logoWrapper}>
+              <Image source={logoImage} style={styles.logo} resizeMode="contain" />
+            </View>
+            <Text style={styles.appName}>TIKOSMART</Text>
+          </View>
 
-        <Pressable onPress={() => router.back()} disabled={isLoading} style={styles.linkRow}>
-          <ThemedText type="link">Quay lại</ThemedText>
-        </Pressable>
-      </View>
-    </ThemedView>
+          {/* Form Card - Đặt giữa màn hình */}
+          <Card style={styles.card} mode="elevated">
+            <Card.Content style={styles.cardContent}>
+              <Text style={styles.headerTitle}>Quên mật khẩu?</Text>
+              <Text style={styles.subtitle}>
+                Nhập địa chỉ email đã đăng ký để nhận hướng dẫn đặt lại mật khẩu.
+              </Text>
+
+              <TextInput
+                label="Địa chỉ Email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                mode="outlined"
+                disabled={isLoading}
+                placeholder="email@gmail.com"
+                style={styles.input}
+                outlineStyle={styles.inputOutline}
+                activeOutlineColor="#2196F3"
+                left={<TextInput.Icon icon="email-outline" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
+              />
+
+              <Button
+                mode="contained"
+                onPress={onSubmit}
+                style={styles.button}
+                contentStyle={styles.buttonContent}
+                labelStyle={styles.buttonLabel}
+                loading={isLoading}
+                disabled={!canSubmit}
+                buttonColor="#2196F3"
+              >
+                Gửi xác nhận
+              </Button>
+
+              <Button
+                mode="text"
+                onPress={() => router.back()}
+                style={styles.backButton}
+                labelStyle={styles.backButtonLabel}
+                disabled={isLoading}
+                textColor="#666"
+              >
+                Quay lại đăng nhập
+              </Button>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </ImageBackground>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  backgroundImage: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)', // Lớp phủ nhẹ để text dễ đọc hơn nếu ảnh nền quá sáng
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center', // Quan trọng: Canh giữa nội dung theo chiều dọc
+    paddingHorizontal: responsiveWidth(20),
+    paddingBottom: responsiveHeight(20),
+  },
+  
+  // --- Logo Styles (Giống Login nhưng nhỏ hơn một chút để cân đối) ---
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: responsiveHeight(30),
+  },
+  logoWrapper: {
+    width: responsiveWidth(70),
+    height: responsiveWidth(70),
+    borderRadius: responsiveWidth(35),
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
-    padding: 16,
+    alignItems: 'center',
+    marginBottom: responsiveHeight(10),
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
+  logo: {
+    width: responsiveWidth(60),
+    height: responsiveWidth(60),
+  },
+  appName: {
+    fontSize: responsiveFont(24),
+    fontWeight: 'bold',
+    color: '#ffffff',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
+
+  // --- Card Styles ---
   card: {
-    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    elevation: 8,
+    // Không dùng marginHorizontal ở đây vì đã padding ở ScrollView
   },
-  title: {
+  cardContent: {
+    paddingVertical: responsiveHeight(25),
+    paddingHorizontal: responsiveWidth(15),
+  },
+  headerTitle: {
+    fontSize: responsiveFont(22),
+    fontWeight: 'bold',
+    color: '#333',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: responsiveHeight(8),
   },
   subtitle: {
+    fontSize: responsiveFont(14),
+    color: '#666',
     textAlign: 'center',
-    opacity: 0.7,
-    marginBottom: 8,
+    marginBottom: responsiveHeight(25),
+    lineHeight: 20,
   },
-  label: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
+  
+  // --- Input & Buttons ---
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginBottom: responsiveHeight(20),
+    backgroundColor: '#fff',
+    height: responsiveHeight(55),
+    fontSize: responsiveFont(15),
+  },
+  inputOutline: {
+    borderRadius: 12,
+    borderColor: '#e0e0e0',
   },
   button: {
-    marginTop: 8,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: '#111',
+    borderRadius: 50,
+    marginTop: responsiveHeight(5),
+    elevation: 2,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  buttonContent: {
+    paddingVertical: responsiveHeight(6),
   },
-  buttonText: {
-    color: '#fff',
+  buttonLabel: {
+    fontSize: responsiveFont(16),
     fontWeight: '600',
   },
-  linkRow: {
-    alignItems: 'center',
-    marginTop: 8,
+  backButton: {
+    marginTop: responsiveHeight(15),
+  },
+  backButtonLabel: {
+    fontSize: responsiveFont(14),
   },
 });
