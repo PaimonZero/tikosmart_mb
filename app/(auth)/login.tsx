@@ -1,9 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Image, ImageBackground, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+    Alert,
+    Animated,
+    Dimensions,
+    Image,
+    ImageBackground,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from 'react-native';
 import { Button, Card, Checkbox, Text, TextInput } from 'react-native-paper';
-
 import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
 import LoginGoogle from '@/components/auth/LoginGoogle';
 import { fetchCurrentUser, loginUser, setCredentials } from '@/store/authSlice';
@@ -26,14 +39,32 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [remember, setRemember] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-    const scrollRef = useRef<ScrollView>(null);
+    // --- State kiểm soát bàn phím ---
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
     // Animated value cho hiệu ứng sóng ngang
     const translateX = useRef(new Animated.Value(0)).current;
 
+    // --- 1. Lắng nghe sự kiện bàn phím ---
+    useEffect(() => {
+        const keyboardShowEvent = Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow';
+        const keyboardHideEvent = Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide';
+
+        const showSubscription = Keyboard.addListener(keyboardShowEvent, () => {
+            setKeyboardVisible(true);
+        });
+        const hideSubscription = Keyboard.addListener(keyboardHideEvent, () => {
+            setKeyboardVisible(false);
+        });
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
+
+    // --- Xử lý Google Deep Link ---
     const googleData = useMemo(() => {
         const v = params?.data;
         return Array.isArray(v) ? v[0] : v;
@@ -44,39 +75,23 @@ export default function LoginScreen() {
         return Array.isArray(v) ? v[0] : v;
     }, [params?.error]);
 
-    // Handle Google OAuth deep-link return (backend redirects here with ?data or ?error)
     useEffect(() => {
         if (!googleData && !googleError) return;
-
         const run = async () => {
-            // Close in-app browser ASAP
-            try {
-                await WebBrowser.dismissBrowser();
-            } catch {
-                // ignore
-            }
+            try { await WebBrowser.dismissBrowser(); } catch { }
 
             if (googleError) {
                 Alert.alert('Đăng nhập thất bại', decodeURIComponent(googleError));
-                // Clear params by replacing the same route without query
                 router.replace('/login');
                 return;
             }
-
-            if (!googleData) {
-                return;
-            }
+            if (!googleData) return;
 
             try {
                 const raw = decodeURIComponent(googleData);
                 const responseData = JSON.parse(raw);
-
                 const user = responseData?.user ?? responseData?.data?.user ?? null;
-                const token =
-                    responseData?.accessToken ??
-                    responseData?.access_token ??
-                    responseData?.token ??
-                    null;
+                const token = responseData?.accessToken ?? responseData?.access_token ?? responseData?.token ?? null;
 
                 if (!user || !token) {
                     Alert.alert('Lỗi', 'Thiếu user/token từ server');
@@ -85,7 +100,6 @@ export default function LoginScreen() {
                 }
 
                 dispatch(setCredentials({ user, token, remember: true }));
-                // Fetch full profile, but don't block navigation.
                 void dispatch(fetchCurrentUser());
                 router.replace('/(tabs)');
             } catch (e) {
@@ -94,10 +108,10 @@ export default function LoginScreen() {
                 router.replace('/login');
             }
         };
-
         void run();
     }, [dispatch, googleData, googleError, router]);
 
+    // --- Animation Loop ---
     useEffect(() => {
         Animated.loop(
             Animated.sequence([
@@ -115,30 +129,6 @@ export default function LoginScreen() {
         ).start();
     }, [translateX]);
 
-    useEffect(() => {
-        const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
-            setKeyboardVisible(true);
-            setKeyboardHeight(e.endCoordinates?.height ?? 0);
-        });
-        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-            setKeyboardVisible(false);
-            setKeyboardHeight(0);
-            // Reset ScrollView offset so it won't keep a blank gap after keyboard dismiss.
-            scrollRef.current?.scrollTo({ y: 0, animated: false });
-        });
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
-    }, []);
-
-    const scrollToForm = () => {
-        // Let layout settle, then scroll.
-        requestAnimationFrame(() => {
-            scrollRef.current?.scrollToEnd({ animated: true });
-        });
-    };
-
     const canSubmit = useMemo(() => {
         return emailOrUsername.trim().length > 0 && password.length > 0 && !isLoading;
     }, [emailOrUsername, password, isLoading]);
@@ -148,7 +138,7 @@ export default function LoginScreen() {
         try {
             await dispatch(loginUser({ emailOrUsername: emailOrUsername.trim(), password, remember })).unwrap();
             await dispatch(fetchCurrentUser()).unwrap();
-            Alert.alert('Đăng nhập thành công', remember ? 'Đã ghi nhớ đăng nhập.' : 'Đăng nhập thành công.');
+            Alert.alert('Thông báo', remember ? 'Đã ghi nhớ đăng nhập.' : 'Đăng nhập thành công.');
             router.replace('/(tabs)');
         } catch (e: any) {
             Alert.alert('Đăng nhập thất bại', (typeof e === 'string' && e) || e?.message || 'Vui lòng kiểm tra lại thông tin.');
@@ -156,13 +146,8 @@ export default function LoginScreen() {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            // Android already resizes the window; using "height" often causes leftover gaps.
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-            {/* Animated background */}
+        <View style={{ flex: 1, backgroundColor: '#fff' }}>
+            {/* Background Animation - Tuyệt đối, không bị cuộn */}
             <Animated.View
                 style={[
                     StyleSheet.absoluteFill,
@@ -179,112 +164,117 @@ export default function LoginScreen() {
                 </ImageBackground>
             </Animated.View>
 
-            <ScrollView
-                ref={scrollRef}
+            {/* Main Logic xử lý bàn phím */}
+            <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                contentContainerStyle={{ flexGrow: 1, paddingBottom: keyboardVisible ? keyboardHeight : 0 }}
-                keyboardShouldPersistTaps="handled"
-                scrollEnabled={keyboardVisible}
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-                overScrollMode="never"
+                // TRICK: Android để undefined để không bị "nhảy" layout, iOS dùng padding
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                {/* Logo + App name */}
-                <View style={styles.logoContainer}>
-                    <View style={styles.logoWrapper}>
-                        <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-                    </View>
-                    <Text style={styles.appName}>TIKOSMART</Text>
-                </View>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <ScrollView
+                        // TRICK: Đổi layout động. 
+                        // - Khi gõ (visible): flex-start để ScrollView hoạt động bình thường -> Textinput tự trồi lên
+                        // - Bình thường: flex-end để layout chìm xuống đáy đẹp mắt
+                        contentContainerStyle={[
+                            styles.scrollContent,
+                            {
+                                justifyContent: isKeyboardVisible ? 'flex-start' : 'flex-end',
+                                // Thêm padding bottom khi gõ để nút đăng nhập không bị sát mép phím quá
+                                paddingBottom: isKeyboardVisible ? 20 : 0
+                            }
+                        ]}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* Logo + App name */}
+                        <View style={styles.logoContainer}>
+                            <View style={styles.logoWrapper}>
+                                <Image source={logoImage} style={styles.logo} resizeMode="contain" />
+                            </View>
+                            <Text style={styles.appName}>TIKOSMART</Text>
+                        </View>
 
-                {/* Main Card */}
-                <View style={styles.flexGrow}>
-                    <Card style={styles.card} mode="elevated">
-                        <Card.Content style={styles.cardContent}>
-                            <Text style={styles.headerTitle}>Chào mừng trở lại!</Text>
-                            <Text style={styles.subtitle}>Đăng nhập để quản lý bán hàng</Text>
+                        {/* Main Card */}
+                        <Card style={styles.card} mode="elevated">
+                            <Card.Content style={styles.cardContent}>
+                                <Text style={styles.headerTitle}>Chào mừng trở lại!</Text>
+                                <Text style={styles.subtitle}>Đăng nhập để quản lý bán hàng</Text>
 
-                            {/* Input Email/User */}
-                            <TextInput
-                                label="Tài khoản"
-                                value={emailOrUsername}
-                                onChangeText={setEmailOrUsername}
-                                onFocus={scrollToForm}
-                                autoCapitalize="none"
-                                mode="outlined"
-                                disabled={isLoading}
-                                placeholder="Email hoặc tên đăng nhập"
-                                style={styles.input}
-                                outlineStyle={styles.inputOutline}
-                                activeOutlineColor="#2196F3"
-                                left={<TextInput.Icon icon="account" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
-                            />
+                                <TextInput
+                                    label="Tài khoản"
+                                    value={emailOrUsername}
+                                    onChangeText={setEmailOrUsername}
+                                    autoCapitalize="none"
+                                    mode="outlined"
+                                    disabled={isLoading}
+                                    placeholder="Email hoặc tên đăng nhập"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    activeOutlineColor="#2196F3"
+                                    left={<TextInput.Icon icon="account" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
+                                />
 
-                            {/* Input Password */}
-                            <TextInput
-                                label="Mật khẩu"
-                                value={password}
-                                onChangeText={setPassword}
-                                onFocus={scrollToForm}
-                                secureTextEntry={!showPassword}
-                                mode="outlined"
-                                disabled={isLoading}
-                                placeholder="Nhập mật khẩu"
-                                style={styles.input}
-                                outlineStyle={styles.inputOutline}
-                                activeOutlineColor="#2196F3"
-                                left={<TextInput.Icon icon="lock" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
-                                right={
-                                    <TextInput.Icon
-                                        icon={showPassword ? "eye-off" : "eye"}
-                                        onPress={() => setShowPassword(!showPassword)}
-                                    />
-                                }
-                            />
+                                <TextInput
+                                    label="Mật khẩu"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry={!showPassword}
+                                    mode="outlined"
+                                    disabled={isLoading}
+                                    placeholder="Nhập mật khẩu"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    activeOutlineColor="#2196F3"
+                                    left={<TextInput.Icon icon="lock" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
+                                    right={
+                                        <TextInput.Icon
+                                            icon={showPassword ? "eye-off" : "eye"}
+                                            onPress={() => setShowPassword(!showPassword)}
+                                        />
+                                    }
+                                />
 
-                            {/* Row: Remember Me & Forgot Password */}
-                            <View style={styles.optionsRow}>
-                                <View style={styles.rememberContainer}>
-                                    <Checkbox
-                                        status={remember ? 'checked' : 'unchecked'}
-                                        onPress={() => setRemember((v) => !v)}
-                                        color="#2196F3"
-                                    />
-                                    <Text style={styles.rememberText}>Ghi nhớ</Text>
+                                <View style={styles.optionsRow}>
+                                    <View style={styles.rememberContainer}>
+                                        <Checkbox
+                                            status={remember ? 'checked' : 'unchecked'}
+                                            onPress={() => setRemember((v) => !v)}
+                                            color="#2196F3"
+                                        />
+                                        <Text style={styles.rememberText}>Ghi nhớ</Text>
+                                    </View>
+
+                                    <TouchableOpacity onPress={() => router.push('/forget-password')}>
+                                        <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+                                    </TouchableOpacity>
                                 </View>
 
-                                <TouchableOpacity onPress={() => router.push('/forget-password')}>
-                                    <Text style={styles.forgotText}>Quên mật khẩu?</Text>
-                                </TouchableOpacity>
-                            </View>
+                                <Button
+                                    mode="contained"
+                                    onPress={onSubmit}
+                                    style={styles.button}
+                                    contentStyle={styles.buttonContent}
+                                    labelStyle={styles.buttonLabel}
+                                    loading={isLoading}
+                                    buttonColor="#2196F3"
+                                >
+                                    Đăng nhập
+                                </Button>
 
-                            {/* Submit Button */}
-                            <Button
-                                mode="contained"
-                                onPress={onSubmit}
-                                style={styles.button}
-                                contentStyle={styles.buttonContent}
-                                labelStyle={styles.buttonLabel}
-                                loading={isLoading}
-                                buttonColor="#2196F3"
-                            >
-                                Đăng nhập
-                            </Button>
-
-                            {/* Social login */}
-                            <View style={styles.socialSection}>
-                                <View style={styles.socialDividerRow}>
-                                    <View style={styles.socialDividerLine} />
-                                    <Text style={styles.socialTitle}>Hoặc đăng nhập với</Text>
-                                    <View style={styles.socialDividerLine} />
+                                <View style={styles.socialSection}>
+                                    <View style={styles.socialDividerRow}>
+                                        <View style={styles.socialDividerLine} />
+                                        <Text style={styles.socialTitle}>Hoặc đăng nhập với</Text>
+                                        <View style={styles.socialDividerLine} />
+                                    </View>
+                                    <LoginGoogle />
                                 </View>
-                                <LoginGoogle />
-                            </View>
-                        </Card.Content>
-                    </Card>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                            </Card.Content>
+                        </Card>
+                    </ScrollView>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+        </View>
     );
 }
 
@@ -292,15 +282,14 @@ const styles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
     },
-    flexGrow: {
-        flex: 1,
-        justifyContent: 'flex-end',
+    scrollContent: {
+        flexGrow: 1,
     },
     // --- Logo Styles ---
     logoContainer: {
         alignItems: 'center',
-        marginTop: responsiveHeight(80),
-        marginBottom: responsiveHeight(10),
+        marginTop: responsiveHeight(60),
+        marginBottom: responsiveHeight(20),
     },
     logo: {
         width: responsiveWidth(80),
@@ -333,17 +322,12 @@ const styles = StyleSheet.create({
         elevation: 10,
         marginHorizontal: 0,
         marginBottom: 0,
-        justifyContent: 'flex-end',
         paddingBottom: 0,
-        minHeight: screenHeight * 0.7,
     },
     cardContent: {
         paddingVertical: responsiveHeight(20),
         paddingHorizontal: responsiveWidth(20),
-        flexGrow: 1,
-        justifyContent: 'flex-end',
         paddingBottom: responsiveHeight(24),
-        marginBottom: responsiveHeight(20),
     },
     headerTitle: {
         fontSize: responsiveFont(25),
@@ -401,7 +385,7 @@ const styles = StyleSheet.create({
         fontSize: responsiveFont(16),
     },
     socialSection: {
-        marginTop: responsiveHeight(40),
+        marginTop: responsiveHeight(30),
         alignItems: 'center',
     },
     socialDividerRow: {
@@ -419,5 +403,5 @@ const styles = StyleSheet.create({
         fontSize: responsiveFont(13),
         color: '#888',
         marginHorizontal: responsiveWidth(12),
-    }
+    },
 });
