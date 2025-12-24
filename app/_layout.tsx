@@ -1,18 +1,18 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { setAuthExpiredHandler } from '@/services/authSession';
-import { fetchCurrentUser, hydrateAuth, logout } from '@/store/authSlice';
+import { hydrateAuth, logout } from '@/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { store } from '@/store/store';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
-import './globals.css';
-import { PaperProvider } from 'react-native-paper';
 import { Toaster } from 'sonner-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import './globals.css';
 
 export const unstable_settings = {
 };
@@ -28,12 +28,6 @@ function RootLayoutInner() {
       void dispatch(hydrateAuth());
     }
   }, [dispatch, hasHydrated]);
-
-  useEffect(() => {
-    if (hasHydrated && isAuthenticated && !hasFetchedProfile) {
-      void dispatch(fetchCurrentUser());
-    }
-  }, [dispatch, hasHydrated, isAuthenticated, hasFetchedProfile]);
 
   useEffect(() => {
     setAuthExpiredHandler(() => {

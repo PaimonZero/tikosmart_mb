@@ -1,23 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
 import AvatarUploader from '@/components/common/AvatarUploader';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import AvatarSourceModal from '@/components/profile/AvatarSourceModal';
 import { AvatarZoomModal } from '@/components/profile/AvatarZoomModal';
 import { EditPhoneModal } from '@/components/profile/EditPhoneModal';
 import LogoutButton from '@/components/profile/LogoutButton';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import ProfileLoading from '@/components/profile/ProfileLoading';
 import { ProfilePersonalInfoSection } from '@/components/profile/ProfilePersonalInfoSection';
 import { ProfileSecuritySection } from '@/components/profile/ProfileSecuritySection';
 import { ProfileSummaryCard } from '@/components/profile/ProfileSummaryCard';
-import { fetchCurrentUser, logoutUserAsync, updateUserAsync } from '@/store/authSlice';
+import { logoutUserAsync, updateUserAsync } from '@/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useRouter } from 'expo-router';
 import { toast } from 'sonner-native';
-import ProfileLoading from '@/components/profile/ProfileLoading';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export default function ProfileScreen() {
 	const router = useRouter();
@@ -27,11 +27,6 @@ export default function ProfileScreen() {
 	const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
 	const [isEditPhoneModalOpen, setIsEditPhoneModalOpen] = useState(false);
 	const [isConfirmLogoutModalOpen, setIsConfirmLogoutModalOpen] = useState(false);
-	useEffect(() => {
-		if (!hasFetchedProfile) {
-			void dispatch(fetchCurrentUser());
-		}
-	}, [dispatch, hasFetchedProfile]);
 
 	const isLoadingProfile = !hasHydrated || (!hasFetchedProfile && !user);
 

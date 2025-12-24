@@ -1,22 +1,16 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Card, Button, Text, Divider } from 'react-native-paper';
+import { Button, Card, Divider, Text } from 'react-native-paper';
 
-import { fetchCurrentUser, logoutUserAsync } from '@/store/authSlice';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
+import { logoutUserAsync } from '@/store/authSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 export default function HomeScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, token, status, hasFetchedProfile } = useAppSelector((s) => s.auth);
-
-  useEffect(() => {
-    if (!hasFetchedProfile) {
-      void dispatch(fetchCurrentUser());
-    }
-  }, [dispatch, hasFetchedProfile]);
 
   const userPretty = useMemo(() => {
     try {
