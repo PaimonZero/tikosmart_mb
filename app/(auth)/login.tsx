@@ -1,3 +1,7 @@
+import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
+import LoginGoogle from '@/components/auth/LoginGoogle';
+import { fetchCurrentUser, loginUser, setCredentials } from '@/store/authSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -16,10 +20,6 @@ import {
     View
 } from 'react-native';
 import { Button, Card, Checkbox, Text, TextInput } from 'react-native-paper';
-import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
-import LoginGoogle from '@/components/auth/LoginGoogle';
-import { fetchCurrentUser, loginUser, setCredentials } from '@/store/authSlice';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toast } from 'sonner-native';
 
 const bgImage = require('@/assets/images/login-background.png');
@@ -39,6 +39,10 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [remember, setRemember] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // ✅ Thêm state cho validation errors
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
 
     // --- State kiểm soát bàn phím ---
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
@@ -129,12 +133,26 @@ export default function LoginScreen() {
         ).start();
     }, [translateX]);
 
-    const canSubmit = useMemo(() => {
-        return emailOrUsername.trim().length > 0 && password.length > 0 && !isLoading;
-    }, [emailOrUsername, password, isLoading]);
+    // const canSubmit = useMemo(() => {
+    //     return !isLoading;
+    // }, [isLoading]);
 
     const onSubmit = async () => {
-        if (!canSubmit) return;
+        let hasError = false;
+        if (!emailOrUsername.trim()) {
+            setEmailError('Tài khoản là bắt buộc');
+            hasError = true;
+        } else {
+            setEmailError('');
+        }
+        if (!password) {
+            setPasswordError('Mật khẩu là bắt buộc');
+            hasError = true;
+        } else {
+            setPasswordError('');
+        }
+        if (hasError) return;
+
         try {
             await dispatch(loginUser({ emailOrUsername: emailOrUsername.trim(), password, remember })).unwrap();
             await dispatch(fetchCurrentUser()).unwrap();
@@ -201,9 +219,12 @@ export default function LoginScreen() {
                                 <Text style={styles.subtitle}>Đăng nhập để quản lý bán hàng</Text>
 
                                 <TextInput
-                                    label="Tài khoản"
+                                    label="Tài khoản *" // ✅ Thêm dấu * để chỉ required
                                     value={emailOrUsername}
-                                    onChangeText={setEmailOrUsername}
+                                    onChangeText={(text) => {
+                                        setEmailOrUsername(text);
+                                        if (emailError) setEmailError(''); // Clear error khi user nhập
+                                    }}
                                     autoCapitalize="none"
                                     mode="outlined"
                                     disabled={isLoading}
@@ -211,13 +232,18 @@ export default function LoginScreen() {
                                     style={styles.input}
                                     outlineStyle={styles.inputOutline}
                                     activeOutlineColor="#2196F3"
+                                    error={!!emailError} // ✅ Hiển thị trạng thái lỗi
                                     left={<TextInput.Icon icon="account" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
                                 />
+                                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
                                 <TextInput
-                                    label="Mật khẩu"
+                                    label="Mật khẩu *" // ✅ Thêm dấu * để chỉ required
                                     value={password}
-                                    onChangeText={setPassword}
+                                    onChangeText={(text) => {
+                                        setPassword(text);
+                                        if (passwordError) setPasswordError(''); // Clear error khi user nhập
+                                    }}
                                     secureTextEntry={!showPassword}
                                     mode="outlined"
                                     disabled={isLoading}
@@ -225,6 +251,7 @@ export default function LoginScreen() {
                                     style={styles.input}
                                     outlineStyle={styles.inputOutline}
                                     activeOutlineColor="#2196F3"
+                                    error={!!passwordError} // ✅ Hiển thị trạng thái lỗi
                                     left={<TextInput.Icon icon="lock" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
                                     right={
                                         <TextInput.Icon
@@ -233,6 +260,7 @@ export default function LoginScreen() {
                                         />
                                     }
                                 />
+                                {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
                                 <View style={styles.optionsRow}>
                                     <View style={styles.rememberContainer}>
@@ -404,5 +432,11 @@ const styles = StyleSheet.create({
         fontSize: responsiveFont(13),
         color: '#888',
         marginHorizontal: responsiveWidth(12),
+    },
+    errorText: {
+        fontSize: responsiveFont(12),
+        color: '#d32f2f', // Red color for error
+        marginTop: responsiveHeight(4),
+        marginBottom: responsiveHeight(8),
     },
 });
