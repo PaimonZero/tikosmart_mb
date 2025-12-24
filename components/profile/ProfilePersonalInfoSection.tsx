@@ -1,5 +1,4 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 
 import { ProfileInfoRow } from '@/components/profile/ProfileInfoRow';
 import { ProfileSection } from '@/components/profile/ProfileSection';

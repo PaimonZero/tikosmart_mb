@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   Image,
   ImageBackground,
   Keyboard,
@@ -22,7 +21,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 const bgImage = require('@/assets/images/login-background.png');
 const logoImage = require('@/assets/images/tikoSmart.png');
 
-const { width: screenWidth } = Dimensions.get('window');
 
 export default function ForgetPasswordScreen() {
   const router = useRouter();

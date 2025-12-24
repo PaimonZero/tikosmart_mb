@@ -33,6 +33,13 @@
       "expo-router",
       "./plugins/withAndroidSingleTask",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép Tikosmart truy cập thư viện ảnh để tải ảnh lên.",
+          "cameraPermission": "Cho phép Tikosmart truy cập camera để chụp ảnh."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/tikoSmart.png",

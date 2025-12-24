@@ -6,6 +6,8 @@ import apiClient from '@/services/apiClient';
 
 type AvatarUploaderRenderProps = {
 	pickAndUpload: () => Promise<void>;
+	pickFromLibraryAndUpload: () => Promise<void>;
+	takePhotoAndUpload: () => Promise<void>;
 	isUploading: boolean;
 };
 
@@ -31,26 +33,8 @@ const guessFileNameFromUri = (uri: string) => {
 export default function AvatarUploader({ onUploaded, onError, children }: AvatarUploaderProps) {
 	const [isUploading, setIsUploading] = useState(false);
 
-	const pickAndUpload = useCallback(async () => {
-		if (isUploading) return;
-
-		try {
-			const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (!perm.granted) {
-				Alert.alert('Quyền truy cập bị từ chối', 'Vui lòng cho phép truy cập Thư viện ảnh để tải ảnh lên.');
-				return;
-			}
-
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ['images'],
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 0.85,
-			});
-
-			if (result.canceled) return;
-
-			const asset = result.assets?.[0];
+	const uploadAsset = useCallback(
+		async (asset: { uri: string; mimeType?: string | null } | null | undefined) => {
 			if (!asset?.uri) return;
 
 			setIsUploading(true);
@@ -70,6 +54,29 @@ export default function AvatarUploader({ onUploaded, onError, children }: Avatar
 			if (!url) throw new Error('Upload failed - no URL returned');
 
 			await onUploaded(url);
+		},
+		[onUploaded]
+	);
+
+	const pickFromLibraryAndUpload = useCallback(async () => {
+		if (isUploading) return;
+
+		try {
+			const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			if (!perm.granted) {
+				Alert.alert('Quyền truy cập bị từ chối', 'Vui lòng cho phép truy cập Thư viện ảnh để tải ảnh lên.');
+				return;
+			}
+
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ['images'],
+				allowsEditing: true,
+				aspect: [1, 1],
+				quality: 0.85,
+			});
+
+			if (result.canceled) return;
+			await uploadAsset(result.assets?.[0]);
 		} catch (e) {
 			onError?.(e);
 			Alert.alert(
@@ -79,7 +86,42 @@ export default function AvatarUploader({ onUploaded, onError, children }: Avatar
 		} finally {
 			setIsUploading(false);
 		}
-	}, [isUploading, onUploaded, onError]);
+	}, [isUploading, uploadAsset, onError]);
 
-	return <>{children({ pickAndUpload, isUploading })}</>;
+	const takePhotoAndUpload = useCallback(async () => {
+		if (isUploading) return;
+
+		try {
+			const perm = await ImagePicker.requestCameraPermissionsAsync();
+			if (!perm.granted) {
+				Alert.alert('Quyền truy cập bị từ chối', 'Vui lòng cho phép truy cập Camera để chụp ảnh.');
+				return;
+			}
+
+			const result = await ImagePicker.launchCameraAsync({
+				mediaTypes: ['images'],
+				allowsEditing: true,
+				aspect: [1, 1],
+				quality: 0.85,
+			});
+
+			if (result.canceled) return;
+			await uploadAsset(result.assets?.[0]);
+		} catch (e) {
+			onError?.(e);
+			Alert.alert(
+				'Lỗi chụp/upload ảnh',
+				(e as any)?.response?.data?.message || (e as any)?.message || 'Không thể chụp/upload ảnh.'
+			);
+		} finally {
+			setIsUploading(false);
+		}
+	}, [isUploading, uploadAsset, onError]);
+
+	// Backward-compatible alias: pick from library
+	const pickAndUpload = pickFromLibraryAndUpload;
+
+	return (
+		<>{children({ pickAndUpload, pickFromLibraryAndUpload, takePhotoAndUpload, isUploading })}</>
+	);
 }

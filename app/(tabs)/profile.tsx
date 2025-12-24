@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
 import AvatarUploader from '@/components/common/AvatarUploader';
 import LogoutButton from '@/components/profile/LogoutButton';
+import AvatarSourceModal from '@/components/profile/AvatarSourceModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfilePersonalInfoSection } from '@/components/profile/ProfilePersonalInfoSection';
 import { ProfileSecuritySection } from '@/components/profile/ProfileSecuritySection';
@@ -17,8 +18,8 @@ import { toast } from 'sonner-native';
 export default function ProfileScreen() {
 	const router = useRouter();
 	const dispatch = useAppDispatch();
-	const { user, hasFetchedProfile, status, hasHydrated, updateUserStatus } = useAppSelector((s) => s.auth);
-	const [isChangingAvatar, setIsChangingAvatar] = useState(false);
+	const { user, hasFetchedProfile, hasHydrated, updateUserStatus } = useAppSelector((s) => s.auth);
+	const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
 	useEffect(() => {
 		if (!hasFetchedProfile) {
@@ -54,28 +55,37 @@ export default function ProfileScreen() {
 							await dispatch(updateUserAsync({ avatar: url })).unwrap();
 							// updateUserAsync.fulfilled đã set state.user = response.data.data
 							// => avatar hiển thị ngay, không cần fetch lại
-							toast.success('Đã cập nhật ảnh đại diện.'), {
-								duration: 3000,
-							}
+							toast.success('Đã cập nhật ảnh đại diện.', { duration: 3000 });
 						}}
 					>
-						{({ pickAndUpload }) => (
-							<ProfileSummaryCard
-								name={user?.fullName || 'Người dùng Tikosmart'}
-								username={user?.username || 'tikouser'}
-								avatarUrl={user?.avatar}
-								role={user?.role}
-								onPressChangeAvatar={async () => {
-									if (isChangingAvatar) return;
-									setIsChangingAvatar(true);
-									try {
-										await pickAndUpload();
-									} finally {
-										setIsChangingAvatar(false);
-									}
-								}}
-								isUploadingAvatar={isChangingAvatar || updateUserStatus === 'loading'}
-							/>
+						{({ pickFromLibraryAndUpload, takePhotoAndUpload, isUploading }) => (
+							<>
+								<ProfileSummaryCard
+									name={user?.fullName || 'Người dùng Tikosmart'}
+									username={user?.username || 'tikouser'}
+									avatarUrl={user?.avatar}
+									role={user?.role}
+									onPressChangeAvatar={() => {
+										if (isUploading || updateUserStatus === 'loading') return;
+										setIsAvatarModalOpen(true);
+									}}
+									isUploadingAvatar={isUploading || updateUserStatus === 'loading'}
+								/>
+
+								<AvatarSourceModal
+									visible={isAvatarModalOpen}
+									disabled={isUploading || updateUserStatus === 'loading'}
+									onClose={() => setIsAvatarModalOpen(false)}
+									onPickFromLibrary={() => {
+										setIsAvatarModalOpen(false);
+										void pickFromLibraryAndUpload();
+									}}
+									onTakePhoto={() => {
+										setIsAvatarModalOpen(false);
+										void takePhotoAndUpload();
+									}}
+								/>
+							</>
 						)}
 					</AvatarUploader>
 

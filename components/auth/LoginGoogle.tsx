@@ -20,6 +20,7 @@ export default function LoginGoogle() {
             // Mở trình duyệt trỏ đến Server Node.js
             await WebBrowser.openBrowserAsync(BACKEND_URL);
         } catch (error) {
+            console.log("Error opening browser:", error);
             Alert.alert("Lỗi", "Không thể mở trình duyệt");
         }
     };
