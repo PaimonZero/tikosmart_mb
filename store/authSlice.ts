@@ -27,6 +27,8 @@ export type AuthState = {
   changePasswordError: string | null;
   updateUserStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
   updateUserError: string | null;
+  logoutStatus?: 'idle' | 'loading' | 'succeeded' | 'failed';
+  logoutError?: string | null;
 };
 
 const initialState: AuthState = {
@@ -42,6 +44,8 @@ const initialState: AuthState = {
   changePasswordError: null,
   updateUserStatus: 'idle',
   updateUserError: null,
+  logoutStatus: 'idle',
+  logoutError: null,
 };
 
 export const hydrateAuth = createAsyncThunk('auth/hydrate', async () => {
@@ -348,6 +352,18 @@ const authSlice = createSlice({
       .addCase(changePasswordAsync.rejected, (state, action) => {
         state.changePasswordStatus = 'failed';
         state.changePasswordError = (action.payload as string) || 'Failed to change password';
+      })
+      //logout
+      .addCase(logoutUserAsync.pending, (state) => {
+        state.logoutStatus = 'loading';
+        state.logoutError = null;
+      })
+      .addCase(logoutUserAsync.fulfilled, (state) => {
+        state.logoutStatus = 'succeeded';
+      })
+      .addCase(logoutUserAsync.rejected, (state, action) => {
+        state.logoutStatus = 'failed';
+        state.logoutError = (action.payload as string) || 'Failed to logout';
       });
   },
 });

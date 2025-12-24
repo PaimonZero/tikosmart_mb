@@ -8,6 +8,7 @@ type ProfileSummaryCardProps = {
   username: string;
   role?: string;
   avatarUrl?: string;
+  onPressAvatar?: () => void; // Thêm prop để phóng to avatar
   onPressChangeAvatar?: () => void;
   isUploadingAvatar?: boolean;
 };
@@ -17,6 +18,7 @@ export function ProfileSummaryCard({
   username,
   role,
   avatarUrl,
+  onPressAvatar,
   onPressChangeAvatar,
   isUploadingAvatar,
 }: ProfileSummaryCardProps) {
@@ -43,35 +45,38 @@ export function ProfileSummaryCard({
       <View className="items-center pb-6 px-4">
 
         {/* Avatar Wrapper - Dùng âm margin (negative margin) để đẩy lên trên */}
-        <Pressable
-          onPress={onPressChangeAvatar}
-          disabled={!!isUploadingAvatar}
-          className="-mt-12 relative mb-3"
-        >
-          {/* Avatar Circle */}
-          <View className="w-40 h-40 bg-gray-200 rounded-full border-4 border-white justify-center items-center overflow-hidden">
-            {/* Nếu có ảnh thật thì dùng <Image>, ở đây dùng Icon placeholder */}
-            {avatarUrl ? (
-              <Image
-                source={avatarUrl}
-                style={{ width: 160, height: 160 }}
-                contentFit="cover"
-                cachePolicy="none"
-              />
-            ) : (
-              <MaterialIcons name="person" size={50} color="#9ca3af" />
-            )}
-          </View>
+        <View className="-mt-12 relative mb-3">
+          {/* Bấm vào avatar để phóng to */}
+          <Pressable onPress={onPressAvatar} disabled={!avatarUrl}>
+            <View className="w-40 h-40 bg-gray-200 rounded-full border-4 border-white justify-center items-center overflow-hidden">
+              {avatarUrl ? (
+                <Image
+                  source={avatarUrl}
+                  style={{ width: 160, height: 160 }}
+                  contentFit="cover"
+                  cachePolicy="none"
+                />
+              ) : (
+                <MaterialIcons name="person" size={50} color="#9ca3af" />
+              )}
+            </View>
+          </Pressable>
 
-          {/* Camera Icon Button (Góc dưới phải) */}
-          <View className="absolute bottom-0 right-0 bg-blue-600 w-12 h-12 rounded-full border-2 border-white justify-center items-center">
-            {isUploadingAvatar ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <MaterialIcons name="camera-alt" size={24} color="#fff" />
-            )}
-          </View>
-        </Pressable>
+          {/* Camera Icon Button (Góc dưới phải) - Bấm để đổi avatar */}
+          <Pressable
+            onPress={onPressChangeAvatar}
+            disabled={!!isUploadingAvatar}
+            className="absolute bottom-0 right-0"
+          >
+            <View className="bg-blue-600 w-12 h-12 rounded-full border-2 border-white justify-center items-center">
+              {isUploadingAvatar ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <MaterialIcons name="camera-alt" size={24} color="#fff" />
+              )}
+            </View>
+          </Pressable>
+        </View>
 
         {/* Name */}
         <Text

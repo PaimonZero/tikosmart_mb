@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
     Animated,
     Dimensions,
     Image,
@@ -21,6 +20,7 @@ import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/util
 import LoginGoogle from '@/components/auth/LoginGoogle';
 import { fetchCurrentUser, loginUser, setCredentials } from '@/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { toast } from 'sonner-native';
 
 const bgImage = require('@/assets/images/login-background.png');
 const logoImage = require('@/assets/images/tikoSmart.png');
@@ -81,7 +81,7 @@ export default function LoginScreen() {
             try { await WebBrowser.dismissBrowser(); } catch { }
 
             if (googleError) {
-                Alert.alert('Đăng nhập thất bại', decodeURIComponent(googleError));
+                toast.error('Đăng nhập thất bại', { description: decodeURIComponent(googleError), duration: 5000 },);
                 router.replace('/login');
                 return;
             }
@@ -94,7 +94,7 @@ export default function LoginScreen() {
                 const token = responseData?.accessToken ?? responseData?.access_token ?? responseData?.token ?? null;
 
                 if (!user || !token) {
-                    Alert.alert('Lỗi', 'Thiếu user/token từ server');
+                    console.error('Lỗi', 'Thiếu user/token từ server');
                     router.replace('/login');
                     return;
                 }
@@ -104,7 +104,7 @@ export default function LoginScreen() {
                 router.replace('/(tabs)');
             } catch (e) {
                 console.error('google deep link parse error:', e);
-                Alert.alert('Lỗi', 'Dữ liệu server trả về không hợp lệ');
+                toast.error('Lỗi', { description: 'Dữ liệu server trả về không hợp lệ', duration: 5000 });
                 router.replace('/login');
             }
         };
@@ -138,10 +138,10 @@ export default function LoginScreen() {
         try {
             await dispatch(loginUser({ emailOrUsername: emailOrUsername.trim(), password, remember })).unwrap();
             await dispatch(fetchCurrentUser()).unwrap();
-            Alert.alert('Thông báo', remember ? 'Đã ghi nhớ đăng nhập.' : 'Đăng nhập thành công.');
+            toast.success(remember ? 'Đã ghi nhớ đăng nhập.' : 'Đăng nhập thành công.', { duration: 3000 });
             router.replace('/(tabs)');
         } catch (e: any) {
-            Alert.alert('Đăng nhập thất bại', (typeof e === 'string' && e) || e?.message || 'Vui lòng kiểm tra lại thông tin.');
+            toast.error('Đăng nhập thất bại', { description: (typeof e === 'string' && e) || e?.message || 'Vui lòng kiểm tra lại thông tin.', duration: 5000 });
         }
     };
 
@@ -257,6 +257,7 @@ export default function LoginScreen() {
                                     labelStyle={styles.buttonLabel}
                                     loading={isLoading}
                                     buttonColor="#2196F3"
+                                    disabled={isLoading}
                                 >
                                     Đăng nhập
                                 </Button>

@@ -5,9 +5,10 @@ import { ProfileSection } from '@/components/profile/ProfileSection';
 
 type ProfilePersonalInfoSectionProps = {
   user: any | null;
+  onEditPhone?: () => void;
 };
 
-export function ProfilePersonalInfoSection({ user }: ProfilePersonalInfoSectionProps) {
+export function ProfilePersonalInfoSection({ user, onEditPhone }: ProfilePersonalInfoSectionProps) {
   
   return (
     <ProfileSection title="THÔNG TIN CÁ NHÂN">
@@ -34,7 +35,7 @@ export function ProfilePersonalInfoSection({ user }: ProfilePersonalInfoSectionP
         value={user?.phone || '—'}
         iconColor="#22c55e"
         actionLabel="Sửa"
-        onPressAction={() => console.log('Sửa sđt')}
+        onPressAction={onEditPhone}
       />
 
       {/* Dòng 4: Tên phòng ban (Màu cam) */}
