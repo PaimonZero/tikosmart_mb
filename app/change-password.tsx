@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import { PasswordInput } from '@/components/change-password/PasswordInput';
 import { ValidationItem } from '@/components/change-password/ValidationItem';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { changePasswordAsync } from '@/store/authSlice';
+import { toast } from 'sonner-native';
 
 export default function ChangePasswordScreen() {
-  const [currentPassword, setCurrentPassword] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrent, setShowCurrent] = useState(false);
@@ -22,18 +25,30 @@ export default function ChangePasswordScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   //Dialog confirm
   const [isDialogVisible, setIsDialogVisible] = useState(false);
-
+  const dispatch = useAppDispatch();
   const isLengthValid = newPassword.length >= 8;
   const hasUpperCase = /[A-Z]/.test(newPassword);
   const hasLowerCase = /[a-z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
   const isComplexityValid = hasUpperCase && hasLowerCase && hasNumber;
   const isMatch = newPassword && confirmPassword && newPassword === confirmPassword;
-  const canSave = isLengthValid && isComplexityValid && isMatch && currentPassword.length > 0;
-
-  const changePassword = async() => {
-    // Thực hiện logic thay đổi mật khẩu ở đây    
-    
+  const canSave = isLengthValid && isComplexityValid && isMatch && oldPassword.length > 0;
+  // loading state của change password
+  const changePasswordStatus = useAppSelector((s) => s.auth.changePasswordStatus);
+  const isLoading = changePasswordStatus === 'loading';
+  const changePassword = async () => {
+    try {
+      await dispatch(changePasswordAsync({ oldPassword, newPassword })).unwrap();
+      toast.success('Đổi mật khẩu thành công', {
+        duration: 3000,
+      });
+      router.back();
+    } catch (error) {
+      toast.error('Đổi mật khẩu thất bại', {
+        description: error instanceof Error ? error.message : 'Đã có lỗi xảy ra',
+        duration: 5000,
+      });
+    }
   }
   return (
     <KeyboardAvoidingView
@@ -51,8 +66,8 @@ export default function ChangePasswordScreen() {
 
         <PasswordInput
           label="Mật khẩu cũ"
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
+          value={oldPassword}
+          onChangeText={setOldPassword}
           show={showCurrent}
           setShow={setShowCurrent}
           placeholder="Nhập mật khẩu hiện tại"
@@ -93,7 +108,7 @@ export default function ChangePasswordScreen() {
 
         <Pressable
           disabled={!canSave}
-          onPress={() => console.log('Lưu thay đổi', newPassword)}
+          onPress={() => setIsDialogVisible(true)}
           className={`rounded-full py-3.5 items-center mb-4 ${canSave ? 'bg-blue-500' : 'bg-blue-300'}`}
         >
           <Text className="text-white font-bold text-base">Lưu thay đổi</Text>
@@ -115,6 +130,7 @@ export default function ChangePasswordScreen() {
         cancelLabel="Hủy"
         confirmLabel="Đồng ý"
         isDanger={true}
+        isLoading={isLoading}
       />
     </KeyboardAvoidingView>
   );

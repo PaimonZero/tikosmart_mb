@@ -23,6 +23,8 @@ export type AuthState = {
   hasHydrated: boolean;
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
+  changePasswordStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  changePasswordError: string | null;
 };
 
 const initialState: AuthState = {
@@ -34,6 +36,8 @@ const initialState: AuthState = {
   hasHydrated: false,
   status: 'idle',
   error: null,
+  changePasswordStatus: 'idle',
+  changePasswordError: null,
 };
 
 export const hydrateAuth = createAsyncThunk('auth/hydrate', async () => {
@@ -327,6 +331,19 @@ const authSlice = createSlice({
       .addCase(updateUserAsync.rejected, (state, action) => {
         state.status = 'failed';
         state.error = (action.payload as string) || 'Failed to update user profile';
+      })
+
+      // CHANGE PASSWORD
+      .addCase(changePasswordAsync.pending, (state) => {
+        state.changePasswordStatus = 'loading';
+        state.changePasswordError = null;
+      })
+      .addCase(changePasswordAsync.fulfilled, (state) => {
+        state.changePasswordStatus = 'succeeded';
+      })
+      .addCase(changePasswordAsync.rejected, (state, action) => {
+        state.changePasswordStatus = 'failed';
+        state.changePasswordError = (action.payload as string) || 'Failed to change password';
       });
   },
 });

@@ -10,8 +10,9 @@ import React, { useEffect } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
 import './globals.css';
-import { TouchableOpacity, View } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { PaperProvider } from 'react-native-paper';
+import { Toaster } from 'sonner-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export const unstable_settings = {
 };
@@ -50,14 +51,14 @@ function RootLayoutInner() {
         <Stack.Screen name="change-password" options={{
           title: 'Đổi mật khẩu',
           headerTitleAlign: 'center',
-          headerTitleStyle: {
-            fontFamily: 'Inter-Bold',
-            fontSize: 18,
-            color: '#333',
-          },
         }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
+      <Toaster
+        position="top-center"  // Vị trí: 'top-center', 'bottom-center', ...
+        richColors={true}      // Khuyên dùng: Tự động tô màu Xanh (Success) / Đỏ (Error)
+        closeButton={true}     // Tùy chọn: Hiện nút X để tắt nhanh
+      />
       <StatusBar style="auto" />
     </ThemeProvider>
   );
@@ -65,8 +66,12 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <Provider store={store}>
-      <RootLayoutInner />
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <PaperProvider>
+          <RootLayoutInner />
+        </PaperProvider>
+      </Provider>
+    </GestureHandlerRootView>
   );
 }
