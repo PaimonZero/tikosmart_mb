@@ -1,21 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
+import AvatarUploader from '@/components/common/AvatarUploader';
 import LogoutButton from '@/components/profile/LogoutButton';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfilePersonalInfoSection } from '@/components/profile/ProfilePersonalInfoSection';
 import { ProfileSecuritySection } from '@/components/profile/ProfileSecuritySection';
 import { ProfileSummaryCard } from '@/components/profile/ProfileSummaryCard';
-import { fetchCurrentUser, logoutUserAsync } from '@/store/authSlice';
+import { fetchCurrentUser, logoutUserAsync, updateUserAsync } from '@/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useRouter } from 'expo-router';
+import { toast } from 'sonner-native';
 
 export default function ProfileScreen() {
 	const router = useRouter();
 	const dispatch = useAppDispatch();
-	const { user, hasFetchedProfile, status, hasHydrated } = useAppSelector((s) => s.auth);
+	const { user, hasFetchedProfile, status, hasHydrated, updateUserStatus } = useAppSelector((s) => s.auth);
+	const [isChangingAvatar, setIsChangingAvatar] = useState(false);
 
 	useEffect(() => {
 		if (!hasFetchedProfile) {
@@ -23,7 +26,7 @@ export default function ProfileScreen() {
 		}
 	}, [dispatch, hasFetchedProfile]);
 
-	const isLoadingProfile = !hasHydrated || status === 'loading' || (!hasFetchedProfile && !user);
+	const isLoadingProfile = !hasHydrated || (!hasFetchedProfile && !user);
 
 	if (isLoadingProfile) {
 		return (
@@ -45,13 +48,37 @@ export default function ProfileScreen() {
 				<ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 					<ProfileHeader />
 
-					<ProfileSummaryCard
-						name={user?.fullName || 'Người dùng Tikosmart'}
-						username={user?.username || 'tikouser'}
-						avatarUrl={user?.avatar}
-						role={user?.role}
-						onPressChangeAvatar={() => Alert.alert('Thông báo', 'Chức năng đổi ảnh đại diện chưa được hỗ trợ.')}
-					/>
+					<AvatarUploader
+						onUploaded={async (url) => {
+							// Backend yêu cầu field: avatar
+							await dispatch(updateUserAsync({ avatar: url })).unwrap();
+							// updateUserAsync.fulfilled đã set state.user = response.data.data
+							// => avatar hiển thị ngay, không cần fetch lại
+							toast.success('Đã cập nhật ảnh đại diện.'), {
+								duration: 3000,
+							}
+						}}
+					>
+						{({ pickAndUpload }) => (
+							<ProfileSummaryCard
+								name={user?.fullName || 'Người dùng Tikosmart'}
+								username={user?.username || 'tikouser'}
+								avatarUrl={user?.avatar}
+								role={user?.role}
+								onPressChangeAvatar={async () => {
+									if (isChangingAvatar) return;
+									setIsChangingAvatar(true);
+									try {
+										await pickAndUpload();
+									} finally {
+										setIsChangingAvatar(false);
+									}
+								}}
+								isUploadingAvatar={isChangingAvatar || updateUserStatus === 'loading'}
+							/>
+						)}
+					</AvatarUploader>
+
 
 					<ProfilePersonalInfoSection user={user} />
 					<ProfileSecuritySection />

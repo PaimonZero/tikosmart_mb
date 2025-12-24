@@ -25,6 +25,8 @@ export type AuthState = {
   error: string | null;
   changePasswordStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
   changePasswordError: string | null;
+  updateUserStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  updateUserError: string | null;
 };
 
 const initialState: AuthState = {
@@ -38,6 +40,8 @@ const initialState: AuthState = {
   error: null,
   changePasswordStatus: 'idle',
   changePasswordError: null,
+  updateUserStatus: 'idle',
+  updateUserError: null,
 };
 
 export const hydrateAuth = createAsyncThunk('auth/hydrate', async () => {
@@ -320,17 +324,17 @@ const authSlice = createSlice({
 
       // UPDATE USER
       .addCase(updateUserAsync.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
+        state.updateUserStatus = 'loading';
+        state.updateUserError = null;
       })
       .addCase(updateUserAsync.fulfilled, (state, action) => {
-        state.status = 'succeeded';
+        state.updateUserStatus = 'succeeded';
         state.user = action.payload;
         void authStorage.persistUserOnly(state.user, state.isRemembered);
       })
       .addCase(updateUserAsync.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = (action.payload as string) || 'Failed to update user profile';
+        state.updateUserStatus = 'failed';
+        state.updateUserError = (action.payload as string) || 'Failed to update user profile';
       })
 
       // CHANGE PASSWORD
