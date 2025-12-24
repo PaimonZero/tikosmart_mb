@@ -1,31 +1,26 @@
 import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
-import LoginGoogle from '@/components/auth/LoginGoogle';
+import DynamicBackground from '@/components/auth/DynamicBackground';
+import { LoginButton } from '@/components/auth/LoginButton';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { LoginLogo } from '@/components/auth/LoginLogo';
+import { LoginOptions } from '@/components/auth/LoginOptions';
+import { LoginSocial } from '@/components/auth/LoginSocial';
 import { fetchCurrentUser, loginUser, setCredentials } from '@/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    ImageBackground,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     StyleSheet,
-    TouchableOpacity,
     TouchableWithoutFeedback,
     View
 } from 'react-native';
-import { Button, Card, Checkbox, Text, TextInput } from 'react-native-paper';
+import { Card, Text } from 'react-native-paper';
 import { toast } from 'sonner-native';
-
-const bgImage = require('@/assets/images/login-background.png');
-const logoImage = require('@/assets/images/tikoSmart.png');
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -46,9 +41,6 @@ export default function LoginScreen() {
 
     // --- State kiểm soát bàn phím ---
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-
-    // Animated value cho hiệu ứng sóng ngang
-    const translateX = useRef(new Animated.Value(0)).current;
 
     // --- 1. Lắng nghe sự kiện bàn phím ---
     useEffect(() => {
@@ -115,24 +107,6 @@ export default function LoginScreen() {
         void run();
     }, [dispatch, googleData, googleError, router]);
 
-    // --- Animation Loop ---
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(translateX, {
-                    toValue: -screenWidth,
-                    duration: 20000,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(translateX, {
-                    toValue: 0,
-                    duration: 0,
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
-    }, [translateX]);
-
     // const canSubmit = useMemo(() => {
     //     return !isLoading;
     // }, [isLoading]);
@@ -156,8 +130,8 @@ export default function LoginScreen() {
         try {
             await dispatch(loginUser({ emailOrUsername: emailOrUsername.trim(), password, remember })).unwrap();
             await dispatch(fetchCurrentUser()).unwrap();
-            toast.success(remember ? 'Đã ghi nhớ đăng nhập.' : 'Đăng nhập thành công.', { duration: 3000 });
             router.replace('/(tabs)');
+            toast.success(remember ? 'Đã ghi nhớ đăng nhập.' : 'Đăng nhập thành công.', { duration: 3000 });
         } catch (e: any) {
             toast.error('Đăng nhập thất bại', { description: (typeof e === 'string' && e) || e?.message || 'Vui lòng kiểm tra lại thông tin.', duration: 5000 });
         }
@@ -166,21 +140,7 @@ export default function LoginScreen() {
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
             {/* Background Animation - Tuyệt đối, không bị cuộn */}
-            <Animated.View
-                style={[
-                    StyleSheet.absoluteFill,
-                    {
-                        width: screenWidth * 2,
-                        height: screenHeight,
-                        transform: [{ translateX }],
-                    },
-                ]}
-                pointerEvents="none"
-            >
-                <ImageBackground source={bgImage} style={{ width: '100%', height: '100%' }} resizeMode="cover">
-                    <View style={styles.overlay} />
-                </ImageBackground>
-            </Animated.View>
+            <DynamicBackground />
 
             {/* Main Logic xử lý bàn phím */}
             <KeyboardAvoidingView
@@ -205,12 +165,7 @@ export default function LoginScreen() {
                         keyboardShouldPersistTaps="handled"
                     >
                         {/* Logo + App name */}
-                        <View style={styles.logoContainer}>
-                            <View style={styles.logoWrapper}>
-                                <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-                            </View>
-                            <Text style={styles.appName}>TIKOSMART</Text>
-                        </View>
+                        <LoginLogo />
 
                         {/* Main Card */}
                         <Card style={styles.card} mode="elevated">
@@ -218,86 +173,32 @@ export default function LoginScreen() {
                                 <Text style={styles.headerTitle}>Chào mừng trở lại!</Text>
                                 <Text style={styles.subtitle}>Đăng nhập để quản lý bán hàng</Text>
 
-                                <TextInput
-                                    label="Tài khoản *" // ✅ Thêm dấu * để chỉ required
-                                    value={emailOrUsername}
-                                    onChangeText={(text) => {
-                                        setEmailOrUsername(text);
-                                        if (emailError) setEmailError(''); // Clear error khi user nhập
-                                    }}
-                                    autoCapitalize="none"
-                                    mode="outlined"
-                                    disabled={isLoading}
-                                    placeholder="Email hoặc tên đăng nhập"
-                                    style={styles.input}
-                                    outlineStyle={styles.inputOutline}
-                                    activeOutlineColor="#2196F3"
-                                    error={!!emailError} // ✅ Hiển thị trạng thái lỗi
-                                    left={<TextInput.Icon icon="account" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
+                                <LoginForm
+                                    emailOrUsername={emailOrUsername}
+                                    setEmailOrUsername={setEmailOrUsername}
+                                    password={password}
+                                    setPassword={setPassword}
+                                    showPassword={showPassword}
+                                    setShowPassword={setShowPassword}
+                                    isLoading={isLoading}
+                                    emailError={emailError}
+                                    setEmailError={setEmailError}
+                                    passwordError={passwordError}
+                                    setPasswordError={setPasswordError}
                                 />
-                                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-                                <TextInput
-                                    label="Mật khẩu *" // ✅ Thêm dấu * để chỉ required
-                                    value={password}
-                                    onChangeText={(text) => {
-                                        setPassword(text);
-                                        if (passwordError) setPasswordError(''); // Clear error khi user nhập
-                                    }}
-                                    secureTextEntry={!showPassword}
-                                    mode="outlined"
-                                    disabled={isLoading}
-                                    placeholder="Nhập mật khẩu"
-                                    style={styles.input}
-                                    outlineStyle={styles.inputOutline}
-                                    activeOutlineColor="#2196F3"
-                                    error={!!passwordError} // ✅ Hiển thị trạng thái lỗi
-                                    left={<TextInput.Icon icon="lock" color={(isFocused) => isFocused ? '#2196F3' : '#aaa'} />}
-                                    right={
-                                        <TextInput.Icon
-                                            icon={showPassword ? "eye-off" : "eye"}
-                                            onPress={() => setShowPassword(!showPassword)}
-                                        />
-                                    }
+                                <LoginOptions
+                                    remember={remember}
+                                    setRemember={setRemember}
+                                    onForgotPassword={() => router.push('/forget-password')}
                                 />
-                                {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
-                                <View style={styles.optionsRow}>
-                                    <View style={styles.rememberContainer}>
-                                        <Checkbox
-                                            status={remember ? 'checked' : 'unchecked'}
-                                            onPress={() => setRemember((v) => !v)}
-                                            color="#2196F3"
-                                        />
-                                        <Text style={styles.rememberText}>Ghi nhớ</Text>
-                                    </View>
-
-                                    <TouchableOpacity onPress={() => router.push('/forget-password')}>
-                                        <Text style={styles.forgotText}>Quên mật khẩu?</Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                                <Button
-                                    mode="contained"
+                                <LoginButton
                                     onPress={onSubmit}
-                                    style={styles.button}
-                                    contentStyle={styles.buttonContent}
-                                    labelStyle={styles.buttonLabel}
-                                    loading={isLoading}
-                                    buttonColor="#2196F3"
-                                    disabled={isLoading}
-                                >
-                                    Đăng nhập
-                                </Button>
+                                    isLoading={isLoading}
+                                />
 
-                                <View style={styles.socialSection}>
-                                    <View style={styles.socialDividerRow}>
-                                        <View style={styles.socialDividerLine} />
-                                        <Text style={styles.socialTitle}>Hoặc đăng nhập với</Text>
-                                        <View style={styles.socialDividerLine} />
-                                    </View>
-                                    <LoginGoogle />
-                                </View>
+                                <LoginSocial />
                             </Card.Content>
                         </Card>
                     </ScrollView>
@@ -313,35 +214,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
-    },
-    // --- Logo Styles ---
-    logoContainer: {
-        alignItems: 'center',
-        marginTop: responsiveHeight(60),
-        marginBottom: responsiveHeight(20),
-    },
-    logo: {
-        width: responsiveWidth(80),
-        height: responsiveWidth(80),
-    },
-    logoWrapper: {
-        width: responsiveWidth(80),
-        height: responsiveWidth(80),
-        borderRadius: responsiveWidth(40),
-        backgroundColor: '#ffffff',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: responsiveHeight(8),
-        elevation: 4,
-    },
-    appName: {
-        fontSize: responsiveFont(26),
-        fontWeight: 'bold',
-        color: '#ffffff',
-        letterSpacing: 1,
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: -1, height: 1 },
-        textShadowRadius: 10,
     },
     // --- Card Styles ---
     card: {
@@ -370,73 +242,5 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center',
         marginBottom: responsiveHeight(25),
-    },
-    input: {
-        marginBottom: responsiveHeight(16),
-        backgroundColor: '#fff',
-        height: responsiveHeight(55),
-        fontSize: responsiveFont(15),
-    },
-    inputOutline: {
-        borderRadius: 12,
-        borderColor: '#e0e0e0',
-    },
-    optionsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: responsiveHeight(20),
-        marginTop: responsiveHeight(-5),
-    },
-    rememberContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    rememberText: {
-        fontSize: responsiveFont(13),
-        color: '#555',
-        marginLeft: 4,
-    },
-    forgotText: {
-        fontSize: responsiveFont(13),
-        color: '#2196F3',
-        fontWeight: '600',
-    },
-    button: {
-        borderRadius: 50,
-        marginTop: responsiveHeight(5),
-        elevation: 2,
-    },
-    buttonContent: {
-        paddingVertical: responsiveHeight(8),
-    },
-    buttonLabel: {
-        fontSize: responsiveFont(16),
-    },
-    socialSection: {
-        marginTop: responsiveHeight(30),
-        alignItems: 'center',
-    },
-    socialDividerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        marginBottom: responsiveHeight(10),
-    },
-    socialDividerLine: {
-        flex: 1,
-        height: 1.5,
-        backgroundColor: '#e0e0e0',
-    },
-    socialTitle: {
-        fontSize: responsiveFont(13),
-        color: '#888',
-        marginHorizontal: responsiveWidth(12),
-    },
-    errorText: {
-        fontSize: responsiveFont(12),
-        color: '#d32f2f', // Red color for error
-        marginTop: responsiveHeight(4),
-        marginBottom: responsiveHeight(8),
     },
 });

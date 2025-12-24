@@ -30,6 +30,7 @@ export function EditPhoneModal({ visible, currentPhone, onClose, onSave, isSavin
       onClose();
     } catch (error) {
       // Error handling đã có trong onSave
+      console.log(error);
     }
   };
 
