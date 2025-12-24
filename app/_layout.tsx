@@ -1,15 +1,17 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { setAuthExpiredHandler } from '@/services/authSession';
+import { fetchCurrentUser, hydrateAuth, logout } from '@/store/authSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { store } from '@/store/store';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { setAuthExpiredHandler } from '@/services/authSession';
-import { fetchCurrentUser, hydrateAuth, logout } from '@/store/authSlice';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { store } from '@/store/store';
+import './globals.css';
+import { TouchableOpacity, View } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export const unstable_settings = {
 };
@@ -45,6 +47,15 @@ function RootLayoutInner() {
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="change-password" options={{
+          title: 'Đổi mật khẩu',
+          headerTitleAlign: 'center',
+          headerTitleStyle: {
+            fontFamily: 'Inter-Bold',
+            fontSize: 18,
+            color: '#333',
+          },
+        }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />
