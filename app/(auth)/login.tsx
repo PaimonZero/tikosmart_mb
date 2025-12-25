@@ -98,6 +98,7 @@ export default function LoginScreen() {
                 dispatch(setCredentials({ user, token, remember: true }));
                 void dispatch(fetchCurrentUser());
                 router.replace('/(tabs)');
+                toast.success('Đăng nhập thành công', { duration: 3000 });
             } catch (e) {
                 console.error('google deep link parse error:', e);
                 toast.error('Lỗi', { description: 'Dữ liệu server trả về không hợp lệ', duration: 5000 });
