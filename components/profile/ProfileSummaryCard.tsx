@@ -25,12 +25,12 @@ export function ProfileSummaryCard({
   const roleMap: Record<string, string> = {
     admin: 'Quản trị viên',
     manager: 'Quản lý',
-    accountant: 'Kế toán',
+    accountant: 'Nhân viên kế toán',
     picker: 'Nhân viên soạn hàng',
     sup_picker: 'Trưởng soạn hàng',
-    shipper: 'Người giao hàng',
+    shipper: 'Nhân viên giao hàng',
     sup_shipper: 'Trưởng giao hàng',
-    seller: 'Người bán',
+    seller: 'Nhân viên bán hàng',
   };
 
   const roleLabel = role ? roleMap[role] ?? role : 'Người dùng';

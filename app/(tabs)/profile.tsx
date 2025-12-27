@@ -140,9 +140,9 @@ export default function ProfileScreen() {
 						content="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?"
 						confirmLabel="Đăng xuất"
 						cancelLabel="Hủy"
-						onConfirm={() => {
+						onConfirm={async () => {
+							await onLogout();
 							setIsConfirmLogoutModalOpen(false);
-							void onLogout();
 						}}
 						onDismiss={() => setIsConfirmLogoutModalOpen(false)}
 						isDanger={true}
