@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
 } from 'react-native';
@@ -15,6 +13,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { changePasswordAsync } from '@/store/authSlice';
 import { toast } from 'sonner-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function ChangePasswordScreen() {
   const [oldPassword, setOldPassword] = useState('');
@@ -51,11 +50,13 @@ export default function ChangePasswordScreen() {
     }
   }
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
+   <KeyboardAwareScrollView
+      className="flex-1 bg-white px-4 py-6"
+      contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid={true}  // Bật cho Android
+      extraScrollHeight={Platform.OS === 'ios' ? 0 : 50}  // Điều chỉnh khoảng cách cuộn bổ sung nếu cần
     >
-      <ScrollView className="flex-1 px-4 py-6" contentContainerStyle={{ paddingBottom: 40 }}>
         <View className="bg-blue-50 p-4 rounded-xl flex-row items-start mb-6">
           <MaterialIcons name="history" size={20} color="#3b82f6" style={{ marginTop: 2 }} />
           <Text className="ml-3 text-slate-600 text-sm leading-5 flex-1">
@@ -120,7 +121,6 @@ export default function ChangePasswordScreen() {
         >
           <Text className="text-gray-500 font-semibold">Hủy bỏ</Text>
         </Pressable>
-      </ScrollView>
       <ConfirmDialog
         visible={isDialogVisible}
         onDismiss={() => setIsDialogVisible(false)}
@@ -132,6 +132,6 @@ export default function ChangePasswordScreen() {
         isDanger={true}
         isLoading={isLoading}
       />
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView >
   );
 }
