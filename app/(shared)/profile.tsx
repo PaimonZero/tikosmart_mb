@@ -74,16 +74,14 @@ export default function ProfileScreen() {
 		}
 	};
 	return (
-		<SafeAreaView style={styles.safe} edges={['top']}>
-			<View style={styles.container}>
-				<ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-					<ProfileHeader />
+		<AvatarUploader onUploaded={updateAvatar}>
+			{({ pickFromLibraryAndUpload, takePhotoAndUpload, isUploading }) => (
+				<View style={{ flex: 1 }}>
+					<SafeAreaView style={styles.safe} edges={['top']}>
+						<View style={styles.container}>
+							<ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+								<ProfileHeader />
 
-					<AvatarUploader
-						onUploaded={updateAvatar}
-					>
-						{({ pickFromLibraryAndUpload, takePhotoAndUpload, isUploading }) => (
-							<>
 								<ProfileSummaryCard
 									name={user?.fullName || 'Người dùng Tikosmart'}
 									username={user?.username || 'tikouser'}
@@ -97,60 +95,60 @@ export default function ProfileScreen() {
 									isUploadingAvatar={isUploading || updateUserStatus === 'loading'}
 								/>
 
-								<AvatarSourceModal
-									visible={isAvatarModalOpen}
-									disabled={isUploading || updateUserStatus === 'loading'}
-									onClose={() => setIsAvatarModalOpen(false)}
-									onPickFromLibrary={() => {
-										setIsAvatarModalOpen(false);
-										void pickFromLibraryAndUpload();
-									}}
-									onTakePhoto={() => {
-										setIsAvatarModalOpen(false);
-										void takePhotoAndUpload();
-									}}
+								<ProfilePersonalInfoSection user={user} onEditPhone={() => setIsEditPhoneModalOpen(true)} />
+
+								<EditPhoneModal
+									visible={isEditPhoneModalOpen}
+									currentPhone={user?.phone}
+									onClose={() => setIsEditPhoneModalOpen(false)}
+									onSave={updatePhone}
+									isSaving={updateUserStatus === 'loading'}
 								/>
 
-								<AvatarZoomModal
-									visible={isZoomModalOpen}
-									avatarUrl={user?.avatar}
-									onClose={() => setIsZoomModalOpen(false)}
+								<ProfileSecuritySection />
+								<LogoutButton
+									logoutAction={() => setIsConfirmLogoutModalOpen(true)}
 								/>
-							</>
-						)}
-					</AvatarUploader>
+								<ConfirmDialog
+									visible={isConfirmLogoutModalOpen}
+									title="Xác nhận đăng xuất"
+									content="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?"
+									confirmLabel="Đăng xuất"
+									cancelLabel="Hủy"
+									onConfirm={async () => {
+										await onLogout();
+										setIsConfirmLogoutModalOpen(false);
+									}}
+									onDismiss={() => setIsConfirmLogoutModalOpen(false)}
+									isDanger={true}
+									isLoading={logoutStatus === 'loading'}
+								/>
+							</ScrollView>
+						</View>
+					</SafeAreaView>
 
-					<ProfilePersonalInfoSection user={user} onEditPhone={() => setIsEditPhoneModalOpen(true)} />
-
-					<EditPhoneModal
-						visible={isEditPhoneModalOpen}
-						currentPhone={user?.phone}
-						onClose={() => setIsEditPhoneModalOpen(false)}
-						onSave={updatePhone}
-						isSaving={updateUserStatus === 'loading'}
-					/>
-
-					<ProfileSecuritySection />
-					<LogoutButton
-						logoutAction={() => setIsConfirmLogoutModalOpen(true)}
-					/>
-					<ConfirmDialog
-						visible={isConfirmLogoutModalOpen}
-						title="Xác nhận đăng xuất"
-						content="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?"
-						confirmLabel="Đăng xuất"
-						cancelLabel="Hủy"
-						onConfirm={async () => {
-							await onLogout();
-							setIsConfirmLogoutModalOpen(false);
+					<AvatarSourceModal
+						visible={isAvatarModalOpen}
+						disabled={isUploading || updateUserStatus === 'loading'}
+						onClose={() => setIsAvatarModalOpen(false)}
+						onPickFromLibrary={() => {
+							setIsAvatarModalOpen(false);
+							void pickFromLibraryAndUpload();
 						}}
-						onDismiss={() => setIsConfirmLogoutModalOpen(false)}
-						isDanger={true}
-						isLoading={logoutStatus === 'loading'}
+						onTakePhoto={() => {
+							setIsAvatarModalOpen(false);
+							void takePhotoAndUpload();
+						}}
 					/>
-				</ScrollView>
-			</View>
-		</SafeAreaView>
+
+					<AvatarZoomModal
+						visible={isZoomModalOpen}
+						avatarUrl={user?.avatar}
+						onClose={() => setIsZoomModalOpen(false)}
+					/>
+				</View>
+			)}
+		</AvatarUploader>
 	);
 }
 
