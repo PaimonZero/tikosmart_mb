@@ -1,6 +1,6 @@
-import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-import { setAuthToken } from '@/services/apiClient';
+import { setAuthToken } from "@/services/apiClient";
 
 import {
   changePassword as changePasswordApi,
@@ -11,8 +11,8 @@ import {
   logoutUser as logoutApi,
   resetPassword as resetPasswordApi,
   updateUserProfile as updateUserApi,
-} from '@/services/authService';
-import authStorage from '@/store/authStorage';
+} from "@/services/authService";
+import authStorage from "@/store/authStorage";
 
 export type AuthState = {
   user: any | null;
@@ -21,13 +21,13 @@ export type AuthState = {
   isRemembered: boolean;
   hasFetchedProfile: boolean;
   hasHydrated: boolean;
-  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  changePasswordStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  changePasswordStatus: "idle" | "loading" | "succeeded" | "failed";
   changePasswordError: string | null;
-  updateUserStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  updateUserStatus: "idle" | "loading" | "succeeded" | "failed";
   updateUserError: string | null;
-  logoutStatus?: 'idle' | 'loading' | 'succeeded' | 'failed';
+  logoutStatus?: "idle" | "loading" | "succeeded" | "failed";
   logoutError?: string | null;
 };
 
@@ -38,138 +38,164 @@ const initialState: AuthState = {
   isRemembered: false,
   hasFetchedProfile: false,
   hasHydrated: false,
-  status: 'idle',
+  status: "idle",
   error: null,
-  changePasswordStatus: 'idle',
+  changePasswordStatus: "idle",
   changePasswordError: null,
-  updateUserStatus: 'idle',
+  updateUserStatus: "idle",
   updateUserError: null,
-  logoutStatus: 'idle',
+  logoutStatus: "idle",
   logoutError: null,
 };
 
-export const hydrateAuth = createAsyncThunk('auth/hydrate', async () => {
+export const hydrateAuth = createAsyncThunk("auth/hydrate", async () => {
   const stored = await authStorage.read();
   return stored;
 });
 
 export const loginUser = createAsyncThunk(
-  'auth/login',
+  "auth/login",
   async (
-    credentials: { emailOrUsername: string; password: string; remember?: boolean },
-    { rejectWithValue }
+    credentials: {
+      emailOrUsername: string;
+      password: string;
+      remember?: boolean;
+    },
+    { rejectWithValue },
   ) => {
     try {
       const { remember, ...loginData } = credentials;
       const res = await loginApi(loginData);
       const { user, accessToken } = res.data;
 
-      await authStorage.persist({ user, token: accessToken, remember: !!remember });
+      await authStorage.persist({
+        user,
+        token: accessToken,
+        remember: !!remember,
+      });
 
       return { user, token: accessToken, remember: !!remember };
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Login failed';
+      const msg = err?.response?.data?.message || "Login failed";
       return rejectWithValue(msg);
     }
-  }
+  },
 );
 
-export const logoutUserAsync = createAsyncThunk('auth/logoutAsync', async (_, { dispatch }) => {
-  try {
-    await logoutApi();
-  } catch {
-    // ignore
-  }
-  dispatch(logout());
-});
+export const logoutUserAsync = createAsyncThunk(
+  "auth/logoutAsync",
+  async (_, { dispatch }) => {
+    try {
+      await logoutApi();
+    } catch {
+      // ignore
+    }
+    dispatch(logout());
+  },
+);
 
 export const forgotPasswordAsync = createAsyncThunk(
-  'auth/forgotPassword',
+  "auth/forgotPassword",
   async (email: string, { rejectWithValue }) => {
     try {
       const res = await forgotPasswordApi(email);
       return res.data;
     } catch (err: any) {
-      return rejectWithValue(err?.response?.data?.message || err?.response?.data || 'Request failed');
+      return rejectWithValue(
+        err?.response?.data?.message || err?.response?.data || "Request failed",
+      );
     }
-  }
+  },
 );
 
 export const resetPasswordAsync = createAsyncThunk(
-  'auth/resetPassword',
-  async ({ token, password }: { token: string; password: string }, { rejectWithValue }) => {
+  "auth/resetPassword",
+  async (
+    { token, password }: { token: string; password: string },
+    { rejectWithValue },
+  ) => {
     try {
       const res = await resetPasswordApi(token, password);
       return res.data;
     } catch (err: any) {
-      return rejectWithValue(err?.response?.data?.message || err?.response?.data || 'Reset failed');
+      return rejectWithValue(
+        err?.response?.data?.message || err?.response?.data || "Reset failed",
+      );
     }
-  }
+  },
 );
 
 export const checkResetTokenAsync = createAsyncThunk(
-  'auth/checkResetToken',
+  "auth/checkResetToken",
   async (token: string, { rejectWithValue }) => {
     try {
       const res = await checkResetTokenApi(token);
       return res.data;
     } catch (err: any) {
-      return rejectWithValue(err?.response?.data?.message || err?.response?.data || 'Invalid token');
+      return rejectWithValue(
+        err?.response?.data?.message || err?.response?.data || "Invalid token",
+      );
     }
-  }
+  },
 );
 
 export const fetchCurrentUser = createAsyncThunk(
-  'auth/fetchCurrentUser',
+  "auth/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
     try {
       const res = await getUserProfile();
       const user = res.data?.data ?? res.data?.user ?? res.data;
       return user;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to fetch user profile';
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch user profile";
       return rejectWithValue(msg);
     }
-  }
+  },
 );
 
 export const updateUserAsync = createAsyncThunk(
-  'auth/updateUser',
+  "auth/updateUser",
   async (data: any, { rejectWithValue }) => {
     try {
       const res = await updateUserApi(data);
       const updatedUser = res.data?.data ?? res.data?.user ?? res.data;
       return updatedUser;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to update user profile';
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to update user profile";
       return rejectWithValue(msg);
     }
-  }
+  },
 );
 
 export const changePasswordAsync = createAsyncThunk(
-  'auth/changePassword',
+  "auth/changePassword",
   async (
     { oldPassword, newPassword }: { oldPassword: string; newPassword: string },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const res = await changePasswordApi({ oldPassword, newPassword });
       return res.data;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to change password';
+      const msg = err?.response?.data?.message || "Failed to change password";
       return rejectWithValue(msg);
     }
-  }
+  },
 );
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setCredentials(
       state,
-      action: PayloadAction<{ user: any; token: string; remember?: boolean }>
+      action: PayloadAction<{ user: any; token: string; remember?: boolean }>,
     ) {
       const remember = !!action.payload.remember;
 
@@ -179,7 +205,7 @@ const authSlice = createSlice({
       state.isRemembered = remember;
       state.hasFetchedProfile = false;
       state.hasHydrated = true;
-      state.status = 'succeeded';
+      state.status = "succeeded";
       state.error = null;
 
       setAuthToken(state.token);
@@ -196,7 +222,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isRemembered = false;
       state.hasFetchedProfile = true;
-      state.status = 'idle';
+      state.status = "idle";
       state.error = null;
       setAuthToken(null);
       // fire and forget
@@ -221,7 +247,7 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(hydrateAuth.pending, (state) => {
-        state.status = 'loading';
+        state.status = "loading";
         state.error = null;
       })
       .addCase(hydrateAuth.fulfilled, (state, action) => {
@@ -231,23 +257,24 @@ const authSlice = createSlice({
         state.isRemembered = remember;
         state.isAuthenticated = !!(user && token);
         state.hasHydrated = true;
-        state.status = 'succeeded';
+        state.status = "succeeded";
 
         setAuthToken(state.token);
       })
       .addCase(hydrateAuth.rejected, (state, action) => {
         state.hasHydrated = true;
-        state.status = 'failed';
-        state.error = (action.error?.message as string) || 'Failed to hydrate auth';
+        state.status = "failed";
+        state.error =
+          (action.error?.message as string) || "Failed to hydrate auth";
       })
 
       // LOGIN
       .addCase(loginUser.pending, (state) => {
-        state.status = 'loading';
+        state.status = "loading";
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        state.status = 'succeeded';
+        state.status = "succeeded";
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
@@ -257,30 +284,35 @@ const authSlice = createSlice({
         setAuthToken(state.token);
       })
       .addCase(loginUser.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = (action.payload as string) || 'Login failed';
+        state.status = "failed";
+        state.error = (action.payload as string) || "Login failed";
         state.isAuthenticated = false;
         state.isRemembered = false;
       })
 
       // FETCH PROFILE
       .addCase(fetchCurrentUser.pending, (state) => {
-        state.status = 'loading';
+        state.status = "loading";
         state.error = null;
       })
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
-        state.status = 'succeeded';
+        state.status = "succeeded";
         state.user = action.payload;
         state.hasFetchedProfile = true;
         void authStorage.persistUserOnly(state.user, state.isRemembered);
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = (action.payload as string) || 'Failed to fetch user profile';
+        state.status = "failed";
+        state.error =
+          (action.payload as string) || "Failed to fetch user profile";
         state.hasFetchedProfile = true;
 
-        const msg = ((action.payload as string) || '').toString().toLowerCase();
-        if (msg.includes('token') || msg.includes('unauthorized') || msg.includes('401')) {
+        const msg = ((action.payload as string) || "").toString().toLowerCase();
+        if (
+          msg.includes("token") ||
+          msg.includes("unauthorized") ||
+          msg.includes("401")
+        ) {
           state.user = null;
           state.token = null;
           state.isAuthenticated = false;
@@ -291,82 +323,85 @@ const authSlice = createSlice({
 
       // FORGOT / RESET / CHECK TOKEN
       .addCase(forgotPasswordAsync.pending, (s) => {
-        s.status = 'loading';
+        s.status = "loading";
         s.error = null;
       })
       .addCase(forgotPasswordAsync.fulfilled, (s) => {
-        s.status = 'succeeded';
+        s.status = "succeeded";
       })
       .addCase(forgotPasswordAsync.rejected, (s, a) => {
-        s.status = 'failed';
-        s.error = (a.payload as string) || 'Request failed';
+        s.status = "failed";
+        s.error = (a.payload as string) || "Request failed";
       })
 
       .addCase(resetPasswordAsync.pending, (s) => {
-        s.status = 'loading';
+        s.status = "loading";
         s.error = null;
       })
       .addCase(resetPasswordAsync.fulfilled, (s) => {
-        s.status = 'succeeded';
+        s.status = "succeeded";
       })
       .addCase(resetPasswordAsync.rejected, (s, a) => {
-        s.status = 'failed';
-        s.error = (a.payload as string) || 'Reset failed';
+        s.status = "failed";
+        s.error = (a.payload as string) || "Reset failed";
       })
 
       .addCase(checkResetTokenAsync.pending, (s) => {
-        s.status = 'loading';
+        s.status = "loading";
         s.error = null;
       })
       .addCase(checkResetTokenAsync.fulfilled, (s) => {
-        s.status = 'succeeded';
+        s.status = "succeeded";
       })
       .addCase(checkResetTokenAsync.rejected, (s, a) => {
-        s.status = 'failed';
-        s.error = (a.payload as string) || 'Invalid token';
+        s.status = "failed";
+        s.error = (a.payload as string) || "Invalid token";
       })
 
       // UPDATE USER
       .addCase(updateUserAsync.pending, (state) => {
-        state.updateUserStatus = 'loading';
+        state.updateUserStatus = "loading";
         state.updateUserError = null;
       })
       .addCase(updateUserAsync.fulfilled, (state, action) => {
-        state.updateUserStatus = 'succeeded';
+        state.updateUserStatus = "succeeded";
         state.user = action.payload;
         void authStorage.persistUserOnly(state.user, state.isRemembered);
       })
       .addCase(updateUserAsync.rejected, (state, action) => {
-        state.updateUserStatus = 'failed';
-        state.updateUserError = (action.payload as string) || 'Failed to update user profile';
+        state.updateUserStatus = "failed";
+        state.updateUserError =
+          (action.payload as string) || "Failed to update user profile";
       })
 
       // CHANGE PASSWORD
       .addCase(changePasswordAsync.pending, (state) => {
-        state.changePasswordStatus = 'loading';
+        state.changePasswordStatus = "loading";
         state.changePasswordError = null;
       })
       .addCase(changePasswordAsync.fulfilled, (state) => {
-        state.changePasswordStatus = 'succeeded';
+        state.changePasswordStatus = "succeeded";
       })
       .addCase(changePasswordAsync.rejected, (state, action) => {
-        state.changePasswordStatus = 'failed';
-        state.changePasswordError = (action.payload as string) || 'Failed to change password';
+        state.changePasswordStatus = "failed";
+        state.changePasswordError =
+          (action.payload as string) || "Failed to change password";
       })
       //logout
       .addCase(logoutUserAsync.pending, (state) => {
-        state.logoutStatus = 'loading';
+        state.logoutStatus = "loading";
         state.logoutError = null;
       })
       .addCase(logoutUserAsync.fulfilled, (state) => {
-        state.logoutStatus = 'succeeded';
+        state.logoutStatus = "succeeded";
       })
       .addCase(logoutUserAsync.rejected, (state, action) => {
-        state.logoutStatus = 'failed';
-        state.logoutError = (action.payload as string) || 'Failed to logout';
+        state.logoutStatus = "failed";
+        state.logoutError = (action.payload as string) || "Failed to logout";
       });
   },
 });
 
-export const { setCredentials, logout, setUser, setAuthenticated, clearAuth } = authSlice.actions;
+export const { setCredentials, logout, setUser, setAuthenticated, clearAuth } =
+  authSlice.actions;
 export default authSlice.reducer;
