@@ -5,6 +5,7 @@ import { HapticTab } from "@/components/haptic-tab";
 import CustomHomeHeader from "@/components/homepage/CustomHomeHeader";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppSelector } from "@/store/hooks";
+import { Feather } from "@expo/vector-icons";
 
 export default function ManagerTabLayout() {
     const { isAuthenticated, hasHydrated } = useAppSelector((s) => s.auth);
@@ -33,11 +34,21 @@ export default function ManagerTabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="products"
+                options={{
+                    title: "Danh sách sản phẩm",
+                    tabBarIcon: ({ color }) => (
+                        <Feather name="package" size={24} color={color} />
+                    ),
+                    headerShown: false,
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: "Tài khoản",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol size={28} name="person.fill" color={color} />
+                        <Feather name="user" size={24} color={color} />
                     ),
                     headerShown: false,
                 }}

@@ -24,7 +24,7 @@ export function ProfileSummaryCard({
 }: ProfileSummaryCardProps) {
   const roleMap: Record<string, string> = {
     admin: 'Quản trị viên',
-    manager: 'Quản lý',
+    manager: 'Quản lý kho',
     accountant: 'Nhân viên kế toán',
     picker: 'Nhân viên soạn hàng',
     sup_picker: 'Trưởng soạn hàng',

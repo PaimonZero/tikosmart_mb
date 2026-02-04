@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button, Card, Text, TextInput } from 'react-native-paper';
 
 import { responsiveFont, responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
 import { forgotPasswordAsync } from '@/store/authSlice';
 import { useAppDispatch } from '@/store/hooks';
+import { toast } from 'sonner-native';
 
 type ForgetPasswordFormProps = {
   email: string;
@@ -24,16 +25,10 @@ export default function ForgetPasswordForm({ email, setEmail, isLoading }: Forge
 
     try {
       const res = await dispatch(forgotPasswordAsync(email.trim())).unwrap();
-      Alert.alert(
-        'Thành công',
-        res?.message || 'Đã gửi liên kết đặt lại mật khẩu đến email. Vui lòng kiểm tra hộp thư.'
-      );
+      toast.success(res?.message || 'Đã gửi liên kết đặt lại mật khẩu đến email. Vui lòng kiểm tra hộp thư.', { duration: 5000 });
       router.back();
     } catch (e: any) {
-      Alert.alert(
-        'Lỗi',
-        (typeof e === 'string' && e) || e?.message || 'Có lỗi xảy ra, vui lòng thử lại.'
-      );
+      toast.error((typeof e === 'string' && e) || e?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     }
   };
 

@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { toast } from 'sonner-native';
 
 type EditPhoneModalProps = {
   visible: boolean;
@@ -17,11 +18,11 @@ export function EditPhoneModal({ visible, currentPhone, onClose, onSave, isSavin
     // Basic validation: Số điện thoại Việt Nam (10-11 số, bắt đầu 0)
     const phoneRegex = /^0\d{9,10}$/;
     if (!phone.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại.');
+      toast.error('Vui lòng nhập số điện thoại.');
       return;
     }
     if (!phoneRegex.test(phone)) {
-      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ (phải bắt đầu bằng 0 và có 10-11 số).');
+      toast.error('Số điện thoại không hợp lệ (phải bắt đầu bằng 0 và có 10-11 số).');
       return;
     }
 

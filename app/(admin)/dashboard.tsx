@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { ScrollView, StyleSheet, View, Text } from "react-native";
+import { Button } from "react-native-paper";
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -9,10 +9,10 @@ export default function AdminDashboard() {
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.content}>
-                <Text variant="headlineMedium" style={styles.title}>
+                <Text className="text-2xl font-bold" style={styles.title}>
                     Admin Dashboard
                 </Text>
-                <Text variant="bodyLarge" style={styles.subtitle}>
+                <Text className="text-lg" style={styles.subtitle}>
                     Chào mừng đến với trang quản trị
                 </Text>
                 <Button
