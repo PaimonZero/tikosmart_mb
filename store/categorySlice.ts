@@ -144,7 +144,15 @@ const categorySlice = createSlice({
     builder.addCase(fetchCategories.fulfilled, (state, action) => {
       state.fetchStatus = "succeeded";
       const { data, pagination } = action.payload || {};
-      state.categories = data || [];
+      const offset = action.meta.arg.offset || 0;
+
+      // Append data if offset > 0 (loading more), otherwise replace
+      if (offset === 0) {
+        state.categories = data || [];
+      } else {
+        state.categories = [...state.categories, ...(data || [])];
+      }
+
       if (pagination) {
         state.pagination = pagination;
       }

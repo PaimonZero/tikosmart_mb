@@ -1,7 +1,9 @@
+import { ProductCategoryFilterModal } from "@/components/product/productList/ProductCategoryFilterModal";
 import { ProductHeader } from "@/components/product/productList/ProductHeader";
 import { ProductListView } from "@/components/product/productList/ProductListView";
 import { ProductTabBar, TabItem } from "@/components/product/productList/ProductTabBar";
 import { useProductPermissions } from "@/hooks/useProductPermissions";
+import { fetchCategories } from "@/store/categorySlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearProducts, fetchListProducts, Product } from "@/store/productSlice";
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -27,6 +29,8 @@ export default function ProductListScreen() {
     const [showFabLabel, setShowFabLabel] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState("");
+    const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
     const tabs: TabItem[] = [
         { key: 'all', title: 'Tất cả', status: '' },
@@ -40,18 +44,28 @@ export default function ProductListScreen() {
     const warningProductsCount = countsByStatus.warning;
     const disabledProductsCount = countsByStatus.disable;
 
-    // Fetch data when status or query changes
+    // Fetch categories on mount
     useEffect(() => {
-        loadData(0, activeQuery, selectedStatus);
-    }, [selectedStatus, activeQuery]);
+        dispatch(fetchCategories({ limit: 100 }));
+    }, [dispatch]);
 
-    const loadData = async (offset: number, q: string, status: string) => {
+    // Fetch data when status, query, or category changes
+    useEffect(() => {
+        loadData(0, activeQuery, selectedStatus, selectedCategoryId);
+    }, [selectedStatus, activeQuery, selectedCategoryId]);
+
+    const loadData = async (offset: number, q: string, status: string, categoryId: string = "") => {
         const params: any = {
             q: q,
             limit: 10,
             offset: offset,
             status: status,
         };
+
+        // Add categoryId if selected
+        if (categoryId) {
+            params.categoryId = categoryId;
+        }
 
         await dispatch(fetchListProducts(params));
     };
@@ -71,7 +85,7 @@ export default function ProductListScreen() {
         if (activeQuery !== "") {
             dispatch(clearProducts());
             // Reload with empty query
-            loadData(0, "", selectedStatus);
+            loadData(0, "", selectedStatus, selectedCategoryId);
         }
     };
 
@@ -82,14 +96,14 @@ export default function ProductListScreen() {
 
     const onRefresh = async () => {
         setRefreshing(true);
-        await loadData(0, activeQuery, selectedStatus);
+        await loadData(0, activeQuery, selectedStatus, selectedCategoryId);
         setRefreshing(false);
     };
 
     const onLoadMore = () => {
         if (fetchStatus === 'succeeded' && products.length < productsPagination.total) {
             const nextOffset = productsPagination.offset + productsPagination.limit;
-            loadData(nextOffset, activeQuery, selectedStatus);
+            loadData(nextOffset, activeQuery, selectedStatus, selectedCategoryId);
         }
     };
 
@@ -118,55 +132,71 @@ export default function ProductListScreen() {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            <ProductHeader
-                activeProducts={activeProductsCount}
-                warningProducts={warningProductsCount}
-                disabledProducts={disabledProductsCount}
-                keyword={keyword}
-                onSearchChange={setKeyword}
-                onSearchSubmit={executeSearch}
-                onSearchClear={handleClearSearch}
-                isSearchExpanded={isSearchExpanded}
-                onSearchExpandChange={setIsSearchExpanded}
-            />
-
-            <View className="z-10 shadow-sm bg-white">
-                <ProductTabBar
-                    tabs={tabs}
-                    selectedStatus={selectedStatus}
-                    onTabPress={handleTabPress}
+        <>
+            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+                <ProductHeader
+                    activeProducts={activeProductsCount}
+                    warningProducts={warningProductsCount}
+                    disabledProducts={disabledProductsCount}
+                    keyword={keyword}
+                    onSearchChange={setKeyword}
+                    onSearchSubmit={executeSearch}
+                    onSearchClear={handleClearSearch}
+                    isSearchExpanded={isSearchExpanded}
+                    onSearchExpandChange={setIsSearchExpanded}
+                    hasActiveFilter={!!selectedCategoryId}
+                    onFilterPress={() => setIsFilterModalVisible(true)}
                 />
-            </View>
 
-            <ProductListView
-                products={products}
-                fetchStatus={fetchStatus}
-                fetchError={fetchError}
-                refreshing={refreshing}
-                activeQuery={activeQuery}
-                onRefresh={onRefresh}
-                onLoadMore={onLoadMore}
-                onProductPress={handleProductPress}
-                onScroll={handleScroll}
+                <View className="shadow-sm bg-white">
+                    <ProductTabBar
+                        tabs={tabs}
+                        selectedStatus={selectedStatus}
+                        onTabPress={handleTabPress}
+                    />
+                </View>
+
+                <ProductListView
+                    products={products}
+                    fetchStatus={fetchStatus}
+                    fetchError={fetchError}
+                    refreshing={refreshing}
+                    activeQuery={activeQuery}
+                    onRefresh={onRefresh}
+                    onLoadMore={onLoadMore}
+                    onProductPress={handleProductPress}
+                    onScroll={handleScroll}
+                />
+
+                {/* FAB chỉ hiện khi user có quyền add */}
+                {canAdd && (
+                    <TouchableOpacity
+                        onPress={navigateToAdd}
+                        className={`absolute bottom-6 right-4 bg-blue-600 rounded-full shadow-lg z-50 elevation-5 flex-row items-center ${showFabLabel ? 'px-4 h-14' : 'w-14 h-14 justify-center'
+                            }`}
+                        activeOpacity={0.8}
+                    >
+                        <AntDesign name="plus" size={24} color="white" />
+                        {showFabLabel && (
+                            <Text className="text-white font-semibold ml-2 text-base">
+                                Thêm sản phẩm
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+                )}
+            </SafeAreaView>
+
+            {/* Category Filter Modal - Outside SafeAreaView */}
+            <ProductCategoryFilterModal
+                visible={isFilterModalVisible}
+                selectedCategoryId={selectedCategoryId}
+                onClose={() => setIsFilterModalVisible(false)}
+                onApply={(categoryId) => {
+                    setSelectedCategoryId(categoryId);
+                    setIsFilterModalVisible(false);
+                    dispatch(clearProducts());
+                }}
             />
-
-            {/* FAB chỉ hiện khi user có quyền add */}
-            {canAdd && (
-                <TouchableOpacity
-                    onPress={navigateToAdd}
-                    className={`absolute bottom-6 right-4 bg-blue-600 rounded-full shadow-lg z-50 elevation-5 flex-row items-center ${showFabLabel ? 'px-4 h-14' : 'w-14 h-14 justify-center'
-                        }`}
-                    activeOpacity={0.8}
-                >
-                    <AntDesign name="plus" size={24} color="white" />
-                    {showFabLabel && (
-                        <Text className="text-white font-semibold ml-2 text-base">
-                            Thêm sản phẩm
-                        </Text>
-                    )}
-                </TouchableOpacity>
-            )}
-        </SafeAreaView>
+        </>
     );
 }

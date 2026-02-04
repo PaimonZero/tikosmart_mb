@@ -6,6 +6,7 @@ export interface ProductParams {
   offset?: number;
   supplierId?: string;
   status?: string;
+  categoryId?: string;
 }
 
 export interface ProductData {
@@ -13,7 +14,7 @@ export interface ProductData {
 }
 
 export const listProducts = (params: ProductParams = {}) => {
-  const { q, limit = 10, offset = 0, supplierId, status } = params;
+  const { q, limit = 10, offset = 0, supplierId, status, categoryId } = params;
   return apiClient.get("/products", {
     params: {
       q: q || undefined,
@@ -21,6 +22,7 @@ export const listProducts = (params: ProductParams = {}) => {
       offset: Number(offset),
       supplierId: supplierId || undefined,
       status: status || undefined,
+      categoryId: categoryId || undefined,
     },
   });
 };

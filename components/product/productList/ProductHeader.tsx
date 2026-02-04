@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { ExpandableSearchBar } from './ExpandableSearchBar';
 
 interface ProductHeaderProps {
@@ -15,6 +15,9 @@ interface ProductHeaderProps {
     onSearchClear: () => void;
     isSearchExpanded: boolean;
     onSearchExpandChange: (expanded: boolean) => void;
+    // Filter props
+    hasActiveFilter?: boolean;
+    onFilterPress?: () => void;
 }
 
 export const ProductHeader: React.FC<ProductHeaderProps> = ({
@@ -27,6 +30,8 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
     onSearchClear,
     isSearchExpanded,
     onSearchExpandChange,
+    hasActiveFilter = false,
+    onFilterPress,
 }) => {
     return (
         <View className="bg-white px-6 pt-2 pb-5 border-b border-gray-100">
@@ -41,7 +46,26 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
                             </Text>
                         </View>
                     )}
-                    <View className={isSearchExpanded ? "flex-1" : ""}>
+                    <View className={isSearchExpanded ? "flex-1" : "flex-row gap-2"}>
+                        {/* Filter Button */}
+                        {!isSearchExpanded && onFilterPress && (
+                            <TouchableOpacity
+                                onPress={onFilterPress}
+                                className="w-12 h-12 items-center justify-center rounded-full bg-gray-50 border border-gray-200 relative"
+                                activeOpacity={0.7}
+                            >
+                                <Feather
+                                    name="filter"
+                                    size={20}
+                                    color={hasActiveFilter ? "#2563EB" : "#6B7280"}
+                                />
+                                {hasActiveFilter && (
+                                    <View className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full" />
+                                )}
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Search Bar */}
                         <ExpandableSearchBar
                             keyword={keyword}
                             onChangeText={onSearchChange}
