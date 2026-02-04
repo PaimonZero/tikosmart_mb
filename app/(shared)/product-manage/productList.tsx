@@ -1,6 +1,6 @@
-import { ProductHeader } from "@/components/product/ProductHeader";
-import { ProductListView } from "@/components/product/ProductListView";
-import { ProductTabBar, TabItem } from "@/components/product/ProductTabBar";
+import { ProductHeader } from "@/components/product/productList/ProductHeader";
+import { ProductListView } from "@/components/product/productList/ProductListView";
+import { ProductTabBar, TabItem } from "@/components/product/productList/ProductTabBar";
 import { useProductPermissions } from "@/hooks/useProductPermissions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearProducts, fetchListProducts, Product } from "@/store/productSlice";
@@ -44,7 +44,7 @@ export default function ProductListScreen() {
     useEffect(() => {
         loadData(0, activeQuery, selectedStatus);
     }, [selectedStatus, activeQuery]);
-    
+
     const loadData = async (offset: number, q: string, status: string) => {
         const params: any = {
             q: q,

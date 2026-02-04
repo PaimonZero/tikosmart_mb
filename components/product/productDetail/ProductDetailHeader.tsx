@@ -41,7 +41,7 @@ export const ProductDetailHeader: React.FC<ProductDetailHeaderProps> = ({
     const animatedIconBg = useMemo(() => ({
         backgroundColor: iconBgOpacity.interpolate({
             inputRange: [0, 1],
-            outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.8)'],
+            outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.4)'],
         }),
     }), [iconBgOpacity]);
 
@@ -82,15 +82,15 @@ export const ProductDetailHeader: React.FC<ProductDetailHeaderProps> = ({
                 <View className="flex-1 flex-row items-center">
                     <Animated.View
                         style={animatedIconBg}
-                        className="w-9 h-9 rounded-full items-center justify-center"
+                        className="w-11 h-11 rounded-full items-center justify-center"
                     >
                         <TouchableOpacity
                             onPress={() => router.back()}
-                            className="w-9 h-9 items-center justify-center"
+                            className="w-11 h-11 items-center justify-center"
                             activeOpacity={0.7}
                         >
                             <Animated.Text style={iconColorStyle}>
-                                <Feather name="arrow-left" size={22} />
+                                <Feather name="arrow-left" size={23} />
                             </Animated.Text>
                         </TouchableOpacity>
                     </Animated.View>
@@ -117,7 +117,7 @@ export const ProductDetailHeader: React.FC<ProductDetailHeaderProps> = ({
 
                 {/* Right: Action Buttons */}
                 <View className="flex-row items-center gap-2">
-                    
+
 
                     {/* Edit Button (if permitted) */}
                     {canEdit && onEdit && (

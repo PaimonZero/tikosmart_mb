@@ -1,10 +1,10 @@
-import { ProductCard } from "@/components/product/ProductCard";
-import { ProductCardSkeleton } from "@/components/product/ProductCardSkeleton";
 import { Product } from "@/store/productSlice";
-import React from "react";
-import { ActivityIndicator, FlatList, RefreshControl, TouchableOpacity, View, Text } from "react-native";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
+import React from "react";
+import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from "react-native";
+import { ProductCard } from "./ProductCard";
+import { ProductCardSkeleton } from "./ProductCardSkeleton";
 
 interface ProductListViewProps {
     products: Product[];

@@ -1,6 +1,6 @@
-import { ProductDetailHeader } from "@/components/product/ProductDetailHeader";
-import { ProductDetailSkeleton } from "@/components/product/ProductDetailSkeleton";
-import { ProductDetailView } from "@/components/product/ProductDetailView";
+import { ProductDetailHeader } from "@/components/product/productDetail/ProductDetailHeader";
+import { ProductDetailSkeleton } from "@/components/product/productDetail/ProductDetailSkeleton";
+import { ProductDetailView } from "@/components/product/productDetail/ProductDetailView";
 import { useProductPermissions, useProductRouteGuard } from "@/hooks/useProductPermissions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchProductById } from "@/store/productSlice";
