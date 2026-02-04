@@ -3,7 +3,6 @@ import { setAuthExpiredHandler } from "@/services/authSession";
 import { fetchCurrentUser, hydrateAuth, logout } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { store } from "@/store/store";
-import Feather from "@expo/vector-icons/Feather";
 import {
   DarkTheme,
   DefaultTheme,
@@ -59,7 +58,6 @@ function RootLayoutInner() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(seller)" options={{ headerShown: false }} />
         <Stack.Screen name="(manager)" options={{ headerShown: false }} />

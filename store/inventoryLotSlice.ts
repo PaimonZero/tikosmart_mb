@@ -24,13 +24,22 @@ export interface Pagination {
   [key: string]: any;
 }
 
+export interface InventoryLotStats {
+  totalLots: number;
+  totalQtyOnHand: number;
+}
+
 export interface InventoryLotState {
   inventoryLots:
     | { data: InventoryLot[]; pagination: Pagination }
     | InventoryLot[]
     | any; // Support legacy or mixed types if necessary, preferably stricter
   inventoryLotsByProductId:
-    | { data: InventoryLot[]; pagination: Pagination }
+    | {
+        data: InventoryLot[];
+        pagination: Pagination;
+        stats?: InventoryLotStats;
+      }
     | InventoryLot[]
     | any;
   inventoryLotsById: InventoryLot | {};
@@ -232,11 +241,29 @@ const inventoryLotSlice = createSlice({
       })
       .addCase(fetchInventoryLots.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        // state.inventoryLotsByProductId = action.payload;
-        state.inventoryLotsByProductId = {
-          data: action.payload.data,
-          pagination: action.payload.pagination,
-        };
+        const { data, pagination, stats } = action.payload;
+        const offset = action.meta.arg.params?.offset || 0;
+
+        // If offset is 0, replace data (initial load or refresh)
+        // Otherwise, append data (load more)
+        if (offset === 0) {
+          state.inventoryLotsByProductId = {
+            data: data,
+            pagination: pagination,
+            stats: stats, // Store stats from API
+          };
+        } else {
+          // Append new data to existing data
+          const existingData = Array.isArray(state.inventoryLotsByProductId)
+            ? state.inventoryLotsByProductId
+            : state.inventoryLotsByProductId?.data || [];
+
+          state.inventoryLotsByProductId = {
+            data: [...existingData, ...data],
+            pagination: pagination,
+            stats: stats, // Update stats even when loading more
+          };
+        }
       })
       .addCase(fetchInventoryLots.rejected, (state, action) => {
         state.fetchStatus = "failed";

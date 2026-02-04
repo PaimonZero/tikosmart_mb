@@ -11,6 +11,52 @@ export interface InventoryLotData {
   [key: string]: any;
 }
 
+export interface InventoryLot {
+  id: string;
+  lotNo: string;
+  productId: string;
+  departmentId: string;
+  expiryDate: string;
+  qtyOnHand: number;
+  conversionRate: number;
+  skuCode: string;
+  productName: string;
+  packUnit: string;
+  mainUnit: string;
+  departmentName: string;
+  departmentCode: string;
+  nearExpiryDays: number;
+  lowStockThreshold: number;
+  qtyInPack: string;
+}
+
+export interface InventoryLotsProduct {
+  id: string;
+  skuCode: string;
+  name: string;
+  imgUrl: string;
+  categoryId: string;
+  categoryName: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  supplierCode: string | null;
+  storageRule: string | null;
+  status: string;
+  adminLocked: boolean;
+  lowStockThreshold: number;
+  nearExpiryDays: number;
+  packUnit: string;
+  mainUnit: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryLotsResponse {
+  success: boolean;
+  data: InventoryLot[];
+  product: InventoryLotsProduct;
+}
+
 // Lấy inventory lots theo product ID
 export const getListInventoryLotsByProductId = (
   productId: string,

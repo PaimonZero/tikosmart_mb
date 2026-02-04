@@ -105,7 +105,7 @@ export const ProductDetailHeader: React.FC<ProductDetailHeaderProps> = ({
                             }}
                         >
                             <Text
-                                className="text-2xl font-bold text-gray-900"
+                                className="text-xl font-bold text-gray-900"
                                 numberOfLines={1}
                                 ellipsizeMode="tail"
                             >
@@ -123,11 +123,11 @@ export const ProductDetailHeader: React.FC<ProductDetailHeaderProps> = ({
                     {canEdit && onEdit && (
                         <Animated.View
                             style={animatedIconBg}
-                            className="w-9 h-9 rounded-full items-center justify-center"
+                            className="w-11 h-11 rounded-full items-center justify-center"
                         >
                             <TouchableOpacity
                                 onPress={onEdit}
-                                className="w-9 h-9 items-center justify-center"
+                                className="w-11 h-11 items-center justify-center"
                                 activeOpacity={0.7}
                             >
                                 <Animated.Text style={iconColorStyle}>

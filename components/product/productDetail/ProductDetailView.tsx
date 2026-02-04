@@ -2,6 +2,7 @@ import { Product } from '@/store/productSlice';
 import Feather from '@expo/vector-icons/Feather';
 import React from 'react';
 import { Animated, Image, Text, TouchableOpacity, View } from 'react-native';
+import { InventoryLotsSection } from './InventoryLotsSection';
 
 interface ProductDetailViewProps {
     product: Product;
@@ -229,6 +230,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </View>
             </View>
 
+            {/* Inventory Lots Section */}
+            <InventoryLotsSection
+                productId={product.id}
+                productName={product.name}
+                mainUnit={product.mainUnit}
+            />
+            
             {/* Storage Rule */}
             {product.storageRule && (
                 <View className="bg-white px-5 py-4 mt-2">
