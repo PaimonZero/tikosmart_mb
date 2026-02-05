@@ -6,9 +6,9 @@ import { useProductPermissions } from "@/hooks/useProductPermissions";
 import { fetchCategories } from "@/store/categorySlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearProducts, fetchListProducts, Product } from "@/store/productSlice";
-import AntDesign from '@expo/vector-icons/AntDesign';
 import React, { useEffect, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
+import { AnimatedFAB } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProductListScreen() {
@@ -26,8 +26,7 @@ export default function ProductListScreen() {
     const [keyword, setKeyword] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState("");
-    const [showFabLabel, setShowFabLabel] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+    const [isExtended, setIsExtended] = useState(true);
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState("");
     const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -112,23 +111,8 @@ export default function ProductListScreen() {
     };
 
     const handleScroll = (event: any) => {
-        const currentScrollY = event.nativeEvent.contentOffset.y;
-        const scrollDifference = currentScrollY - lastScrollY;
-
-        // Show label only when at the very top
-        if (currentScrollY <= 10) {
-            setShowFabLabel(true);
-        }
-        // Hide label when scrolling down significantly
-        else if (scrollDifference > 5 && currentScrollY > 50) {
-            setShowFabLabel(false);
-        }
-        // Show label only when scrolling up significantly (more than 100px)
-        else if (scrollDifference < -100) {
-            setShowFabLabel(true);
-        }
-
-        setLastScrollY(currentScrollY);
+        const currentScrollPosition = Math.floor(event.nativeEvent?.contentOffset?.y) ?? 0;
+        setIsExtended(currentScrollPosition <= 0);
     };
 
     return (
@@ -170,19 +154,21 @@ export default function ProductListScreen() {
 
                 {/* FAB chỉ hiện khi user có quyền add */}
                 {canAdd && (
-                    <TouchableOpacity
+                    <AnimatedFAB
+                        icon="plus"
+                        label="Thêm sản phẩm"
+                        extended={isExtended}
                         onPress={navigateToAdd}
-                        className={`absolute bottom-6 right-4 bg-blue-600 rounded-full shadow-lg z-50 elevation-5 flex-row items-center ${showFabLabel ? 'px-4 h-14' : 'w-14 h-14 justify-center'
-                            }`}
-                        activeOpacity={0.8}
-                    >
-                        <AntDesign name="plus" size={24} color="white" />
-                        {showFabLabel && (
-                            <Text className="text-white font-semibold ml-2 text-base">
-                                Thêm sản phẩm
-                            </Text>
-                        )}
-                    </TouchableOpacity>
+                        visible={true}
+                        animateFrom="right"
+                        iconMode="dynamic"
+                        color="#FFFFFF"
+                        style={{
+                            bottom: 24,
+                            right: 16,
+                            backgroundColor: "#2563EB",
+                        }}
+                    />
                 )}
             </SafeAreaView>
 

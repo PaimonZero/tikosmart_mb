@@ -5,35 +5,30 @@ import {
     UserFilterBar,
     UserFormBottomSheet,
     UserSearchBar,
-    UserStatsHeader,
+    UserStatsHeader
 } from "@/components/admin/users";
 import useUserStatusSocket from "@/hooks/useUserStatusSocket";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { createUser, fetchListUsers, updateUser } from "@/store/userSlice";
-import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
-    Animated,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
+    FlatList,
     RefreshControl,
     Text,
-    TouchableOpacity,
     View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AnimatedFAB } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { toast } from "sonner-native";
 
 export default function UserManageScreen() {
     const dispatch = useAppDispatch();
-
-    // Realtime status
     useUserStatusSocket();
 
     const { listUsers, fetchStatus, createStatus, updateStatus } = useAppSelector(
-        (state) => state.user,
+        (state) => state.user
     );
 
     const [modalVisible, setModalVisible] = useState(false);
@@ -41,22 +36,26 @@ export default function UserManageScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [refreshing, setRefreshing] = useState(false);
 
-    // Filter state
     const [filters, setFilters] = useState<UserFilters>({
         roles: [],
         status: null,
         onlineStatus: "all",
     });
 
-    // FAB animation
-    const scrollY = useRef(new Animated.Value(0)).current;
-    const labelOpacity = useRef(new Animated.Value(1)).current;
+    const [isExtended, setIsExtended] = useState(true);
+
+    const onScroll = ({ nativeEvent }: any) => {
+        const currentScrollPosition = Math.floor(nativeEvent?.contentOffset?.y) ?? 0;
+        setIsExtended(currentScrollPosition <= 0);
+    };
 
     useEffect(() => {
-        dispatch(fetchListUsers({
-            q: searchQuery,
-            role: filters.roles.length > 0 ? filters.roles[0] : undefined,
-        }));
+        dispatch(
+            fetchListUsers({
+                q: searchQuery,
+                role: filters.roles.length > 0 ? filters.roles[0] : undefined,
+            })
+        );
     }, [dispatch, searchQuery, filters.roles]);
 
     const handleRefresh = async () => {
@@ -82,7 +81,7 @@ export default function UserManageScreen() {
                 if (!payload.password) delete payload.password;
 
                 await dispatch(
-                    updateUser({ userId: editingUser.id, userData: payload }),
+                    updateUser({ userId: editingUser.id, userData: payload })
                 ).unwrap();
                 toast.success("Cập nhật người dùng thành công", { duration: 3000 });
             } else {
@@ -98,52 +97,22 @@ export default function UserManageScreen() {
         }
     };
 
-    // Handle scroll for FAB animation
-    const handleScroll = Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        {
-            useNativeDriver: false,
-            listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                const offsetY = event.nativeEvent.contentOffset.y;
-
-                // Hide label when scrolling down
-                if (offsetY > 50) {
-                    Animated.timing(labelOpacity, {
-                        toValue: 0,
-                        duration: 200,
-                        useNativeDriver: false,
-                    }).start();
-                } else {
-                    Animated.timing(labelOpacity, {
-                        toValue: 1,
-                        duration: 200,
-                        useNativeDriver: false,
-                    }).start();
-                }
-            },
-        },
-    );
-
-    // Filter and search logic
     const filteredUsers = useMemo(() => {
         let result = [...listUsers.data];
 
-        // Search filter
         if (searchQuery) {
             result = result.filter(
                 (user: User) =>
                     user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    user.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+                    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
 
-        // Role filter
         if (filters.roles.length > 0) {
             result = result.filter((user: User) => filters.roles.includes(user.role));
         }
 
-        // Status filter
         if (filters.status) {
             result = result.filter((user: User) => user.status === filters.status);
         }
@@ -157,14 +126,12 @@ export default function UserManageScreen() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
-                {/* Header */}
                 <View className="bg-white border-b border-gray-200 px-4 py-4">
                     <Text className="text-2xl font-bold text-gray-900">
                         Quản lý người dùng
                     </Text>
                 </View>
 
-                {/* Stats Header */}
                 <UserStatsHeader
                     users={listUsers.data}
                     total={listUsers.pagination?.total}
@@ -172,23 +139,20 @@ export default function UserManageScreen() {
                     activeCount={listUsers.activeCount}
                 />
 
-                {/* Filter Bar */}
                 <UserFilterBar filters={filters} onFiltersChange={setFilters} />
 
-                {/* Search Bar */}
                 <UserSearchBar
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                 />
 
-                {/* User List */}
                 {fetchStatus === "loading" && listUsers.data.length === 0 ? (
                     <View className="flex-1 items-center justify-center">
                         <ActivityIndicator size="large" color="#3B82F6" />
                         <Text className="text-gray-500 mt-4">Đang tải...</Text>
                     </View>
                 ) : (
-                    <Animated.FlatList
+                    <FlatList
                         data={filteredUsers}
                         keyExtractor={(item) => item.id}
                         renderItem={renderItem}
@@ -197,7 +161,7 @@ export default function UserManageScreen() {
                             paddingBottom: 100,
                             flexGrow: 1,
                         }}
-                        onScroll={handleScroll}
+                        onScroll={onScroll}
                         scrollEventThrottle={16}
                         refreshControl={
                             <RefreshControl
@@ -208,13 +172,19 @@ export default function UserManageScreen() {
                             />
                         }
                         onEndReached={() => {
-                            if (fetchStatus !== "loading" && listUsers.data.length < (listUsers.pagination?.total || Infinity)) {
-                                dispatch(fetchListUsers({
-                                    offset: listUsers.data.length,
-                                    limit: 10,
-                                    q: searchQuery,
-                                    role: filters.roles.length > 0 ? filters.roles[0] : undefined,
-                                }));
+                            if (
+                                fetchStatus !== "loading" &&
+                                listUsers.data.length < (listUsers.pagination?.total || Infinity)
+                            ) {
+                                dispatch(
+                                    fetchListUsers({
+                                        offset: listUsers.data.length,
+                                        limit: 10,
+                                        q: searchQuery,
+                                        role:
+                                            filters.roles.length > 0 ? filters.roles[0] : undefined,
+                                    })
+                                );
                             }
                         }}
                         onEndReachedThreshold={0.5}
@@ -243,53 +213,23 @@ export default function UserManageScreen() {
                     />
                 )}
 
-                {/* Animated Floating Action Button */}
-                <Animated.View
+                <AnimatedFAB
+                    icon="plus"
+                    label="Thêm mới"
+                    extended={isExtended}
+                    onPress={handleOpenCreate}
+                    visible={true}
+                    animateFrom="right"
+                    iconMode="dynamic"
+                    color="#FFFFFF"
                     style={{
-                        position: "absolute",
                         bottom: 16,
                         right: 16,
-                        height: 56,
+                        backgroundColor: "#2563EB",
                     }}
-                >
-                    <TouchableOpacity
-                        onPress={handleOpenCreate}
-                        activeOpacity={0.8}
-                        style={{
-                            height: 56,
-                            paddingHorizontal: 16,
-                            backgroundColor: "#3B82F6",
-                            borderRadius: 28,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            shadowColor: "#3B82F6",
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.3,
-                            shadowRadius: 8,
-                            elevation: 8,
-                        }}
-                    >
-                        <Ionicons name="add" size={24} color="white" />
-                        <Animated.View
-                            style={{
-                                opacity: labelOpacity,
-                                width: labelOpacity.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 80],
-                                }),
-                                overflow: "hidden",
-                            }}
-                        >
-                            <Text className="text-white font-bold text-base ml-2">
-                                Thêm mới
-                            </Text>
-                        </Animated.View>
-                    </TouchableOpacity>
-                </Animated.View>
+                />
             </SafeAreaView>
 
-            {/* Bottom Sheet Form - Outside SafeAreaView for better z-index handling */}
             <UserFormBottomSheet
                 isOpen={modalVisible}
                 onClose={() => setModalVisible(false)}
