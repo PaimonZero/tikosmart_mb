@@ -154,6 +154,10 @@ const departmentSlice = createSlice({
     clearDepartmentDetail: (state) => {
       state.departmentById = {};
     },
+    clearDepartments: (state) => {
+      state.departments.data = [];
+      state.departments.pagination = {};
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -164,7 +168,17 @@ const departmentSlice = createSlice({
       })
       .addCase(fetchDepartments.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        state.departments.data = action.payload.data;
+        const offset = action.payload.pagination?.offset || 0;
+
+        // If offset is 0, replace data; otherwise append
+        if (offset === 0) {
+          state.departments.data = action.payload.data;
+        } else {
+          state.departments.data = [
+            ...state.departments.data,
+            ...action.payload.data,
+          ];
+        }
         state.departments.pagination = action.payload.pagination;
       })
       .addCase(fetchDepartments.rejected, (state, action) => {
@@ -241,7 +255,7 @@ const departmentSlice = createSlice({
   },
 });
 
-export const { resetDepartmentState, clearDepartmentDetail } =
+export const { resetDepartmentState, clearDepartmentDetail, clearDepartments } =
   departmentSlice.actions;
 
 export default departmentSlice.reducer;

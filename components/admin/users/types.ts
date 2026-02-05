@@ -10,6 +10,9 @@ export interface User {
   status?: string;
   avatar?: string;
   online?: boolean;
+  departmentId?: string;
+  departmentName?: string;
+  departmentCode?: string;
 }
 
 export interface RoleOption {
@@ -38,7 +41,7 @@ export interface UserFormData {
   role: string;
   status: string;
   password: string;
-  warehouseId?: string; // Cơ sở/Kho
+  departmentId?: string; // Cơ sở/Kho
 }
 
 export const ROLE_OPTIONS: RoleOption[] = [
