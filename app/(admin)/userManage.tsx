@@ -147,14 +147,6 @@ export default function UserManageScreen() {
         if (filters.status) {
             result = result.filter((user: User) => user.status === filters.status);
         }
-
-        // Online status filter
-        if (filters.onlineStatus === "online") {
-            result = result.filter((user: User) => user.online === true);
-        } else if (filters.onlineStatus === "offline") {
-            result = result.filter((user: User) => !user.online);
-        }
-
         return result;
     }, [listUsers.data, searchQuery, filters]);
 
@@ -173,7 +165,12 @@ export default function UserManageScreen() {
                 </View>
 
                 {/* Stats Header */}
-                <UserStatsHeader users={listUsers.data} total={listUsers.pagination?.total} />
+                <UserStatsHeader
+                    users={listUsers.data}
+                    total={listUsers.pagination?.total}
+                    onlineCount={listUsers.onlineCount}
+                    activeCount={listUsers.activeCount}
+                />
 
                 {/* Filter Bar */}
                 <UserFilterBar filters={filters} onFiltersChange={setFilters} />

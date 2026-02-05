@@ -6,12 +6,14 @@ import type { User } from "./types";
 interface UserStatsHeaderProps {
     users: User[];
     total?: number;
+    onlineCount?: number;
+    activeCount?: number;
 }
 
-export default function UserStatsHeader({ users, total }: UserStatsHeaderProps) {
+export default function UserStatsHeader({ users, total, onlineCount, activeCount }: UserStatsHeaderProps) {
     const totalUsers = total ?? users.length;
-    const activeUsers = users.filter((u) => u.status === "active").length;
-    const onlineUsers = users.filter((u) => u.online).length;
+    const activeUsers = activeCount ?? users.filter((u) => u.status === "active").length;
+    const onlineUsers = onlineCount ?? users.filter((u) => u.online).length;
 
     const stats = [
         {

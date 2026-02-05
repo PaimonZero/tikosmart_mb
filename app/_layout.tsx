@@ -18,6 +18,7 @@ import "react-native-reanimated";
 import { Provider } from "react-redux";
 import { Toaster } from "sonner-native";
 import "./globals.css";
+import useUserStatusSocket from "@/hooks/useUserStatusSocket";
 
 export const unstable_settings = {};
 
@@ -30,7 +31,9 @@ function RootLayoutInner() {
   const dispatch = useAppDispatch();
   const { isAuthenticated, hasFetchedProfile, hasHydrated, user } =
     useAppSelector((s) => s.auth);
-
+    
+  // Cập nhật trạng thái online realtime ngay sau khi login
+  useUserStatusSocket();
   useEffect(() => {
     if (!hasHydrated) {
       void dispatch(hydrateAuth());

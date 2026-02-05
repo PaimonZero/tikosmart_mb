@@ -7,7 +7,12 @@ import {
 } from "../services/userService";
 
 interface UserState {
-  listUsers: { data: any[]; pagination: any };
+  listUsers: {
+    data: any[];
+    pagination: any;
+    onlineCount?: number;
+    activeCount?: number;
+  };
   fetchStatus: "idle" | "loading" | "succeeded" | "failed";
   fetchError: string | null;
   createStatus: "idle" | "loading" | "succeeded" | "failed";
@@ -123,6 +128,12 @@ const userSlice = createSlice({
           : user;
       });
     },
+    updateOnlineCount: (state, action) => {
+      const { onlineCount } = action.payload;
+      if (state.listUsers) {
+        state.listUsers.onlineCount = onlineCount;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -142,6 +153,8 @@ const userSlice = createSlice({
             ...action.payload.data,
           ];
           state.listUsers.pagination = action.payload.pagination;
+          state.listUsers.onlineCount = action.payload.onlineCount;
+          state.listUsers.activeCount = action.payload.activeCount;
         } else {
           // Replace data (initial load or refresh)
           state.listUsers = action.payload;
@@ -203,5 +216,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { updateOnlineStatusBatch } = userSlice.actions;
+export const { updateOnlineStatusBatch, updateOnlineCount } = userSlice.actions;
 export default userSlice.reducer;

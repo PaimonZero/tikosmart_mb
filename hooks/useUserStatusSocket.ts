@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { updateOnlineStatusBatch } from "@/store/userSlice";
+import { updateOnlineCount, updateOnlineStatusBatch } from "@/store/userSlice";
 import { useEffect } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { io, Socket } from "socket.io-client";
@@ -14,7 +14,6 @@ function useUserStatusSocket() {
   const userId = useAppSelector((state) => state.auth.user?.id);
 
   useEffect(() => {
-    if (!userId || !SOCKET_URL) return;
 
     const socket: Socket = io(SOCKET_URL, {
       transports: ["websocket"],
@@ -25,6 +24,10 @@ function useUserStatusSocket() {
 
     socket.on("users:status", (statusList: any[]) => {
       dispatch(updateOnlineStatusBatch(statusList));
+    });
+
+    socket.on("user:onlineCount", (data: { onlineCount: number }) => {
+      dispatch(updateOnlineCount({ onlineCount: data.onlineCount }));
     });
 
     // Handle app state changes for better online/offline status
