@@ -3,7 +3,6 @@ import { ProductHeader } from "@/components/product/productList/ProductHeader";
 import { ProductListView } from "@/components/product/productList/ProductListView";
 import { ProductTabBar, TabItem } from "@/components/product/productList/ProductTabBar";
 import { useProductPermissions } from "@/hooks/useProductPermissions";
-import { fetchCategories } from "@/store/categorySlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearProducts, fetchListProducts, Product } from "@/store/productSlice";
 import React, { useEffect, useState } from "react";
@@ -42,11 +41,6 @@ export default function ProductListScreen() {
     const activeProductsCount = countsByStatus.active;
     const warningProductsCount = countsByStatus.warning;
     const disabledProductsCount = countsByStatus.disable;
-
-    // Fetch categories on mount
-    useEffect(() => {
-        dispatch(fetchCategories({ limit: 100 }));
-    }, [dispatch]);
 
     // Fetch data when status, query, or category changes
     useEffect(() => {
