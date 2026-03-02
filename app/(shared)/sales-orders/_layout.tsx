@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
-import React from 'react';
+import { Stack } from "expo-router";
+import React from "react";
 
-export default function SharedLayout() {
+export default function SalesOrdersLayout() {
     return (
         <Stack
             screenOptions={{
@@ -9,15 +9,15 @@ export default function SharedLayout() {
             }}
         >
             <Stack.Screen
-                name="product-manage"
+                name="salesOrdersList"
                 options={{
-                    title: 'Quản lý sản phẩm',
+                    title: "Danh sách đơn hàng",
                 }}
             />
             <Stack.Screen
-                name="sales-orders"
+                name="[id]"
                 options={{
-                    title: 'Đơn hàng bán',
+                    title: "Chi tiết đơn hàng",
                 }}
             />
         </Stack>

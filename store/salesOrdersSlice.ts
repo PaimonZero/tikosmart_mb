@@ -159,8 +159,15 @@ const salesOrdersSlice = createSlice({
       })
       .addCase(fetchSalesOrders.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        state.salesOrders.data = action.payload.data;
-        state.salesOrders.pagination = action.payload.pagination;
+        const { data, pagination } = action.payload;
+        if (pagination?.offset && pagination.offset > 0) {
+          // Append if loading more
+          state.salesOrders.data = [...state.salesOrders.data, ...data];
+        } else {
+          // Replace if first page
+          state.salesOrders.data = data;
+        }
+        state.salesOrders.pagination = pagination;
       })
       .addCase(fetchSalesOrders.rejected, (state, action) => {
         state.fetchStatus = "failed";
@@ -174,8 +181,15 @@ const salesOrdersSlice = createSlice({
       })
       .addCase(fetchSalesOrdersBySeller.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        state.salesOrders.data = action.payload.data;
-        state.salesOrders.pagination = action.payload.pagination;
+        const { data, pagination } = action.payload;
+        if (pagination?.offset && pagination.offset > 0) {
+          // Append if loading more
+          state.salesOrders.data = [...state.salesOrders.data, ...data];
+        } else {
+          // Replace if first page
+          state.salesOrders.data = data;
+        }
+        state.salesOrders.pagination = pagination;
       })
       .addCase(fetchSalesOrdersBySeller.rejected, (state, action) => {
         state.fetchStatus = "failed";
