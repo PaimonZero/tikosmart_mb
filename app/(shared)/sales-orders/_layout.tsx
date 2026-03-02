@@ -10,15 +10,11 @@ export default function SalesOrdersLayout() {
         >
             <Stack.Screen
                 name="salesOrdersList"
-                options={{
-                    title: "Danh sách đơn hàng",
-                }}
+                options={{ title: "Danh sách đơn hàng" }}
             />
             <Stack.Screen
                 name="[id]"
-                options={{
-                    title: "Chi tiết đơn hàng",
-                }}
+                options={{ title: "Chi tiết đơn hàng" }}
             />
         </Stack>
     );

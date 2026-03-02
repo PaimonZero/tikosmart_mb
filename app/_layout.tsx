@@ -77,10 +77,6 @@ function RootLayoutInner() {
             headerTitleAlign: "center",
           }}
         />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
       </Stack>
       <Toaster
         position="top-center" // Vị trí: 'top-center', 'bottom-center', ...

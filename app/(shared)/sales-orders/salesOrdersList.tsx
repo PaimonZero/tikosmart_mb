@@ -38,6 +38,7 @@ export default function SalesOrdersListScreen() {
     const { salesOrders, fetchStatus, fetchError } = useAppSelector(
         (state) => state.salesOrders,
     );
+    const user = useAppSelector((state) => state.auth.user);
 
     const [keyword, setKeyword] = useState("");
     const [refreshing, setRefreshing] = useState(false);
@@ -67,6 +68,9 @@ export default function SalesOrdersListScreen() {
             offset: offset,
             status: status,
         };
+        if (user?.role === "seller") {
+            params.sellerId = user.id;
+        }
         await dispatch(fetchSalesOrders(params));
     };
 
