@@ -29,7 +29,7 @@ export const SalesOrderHeader = ({
             </View>
 
             {/* Right: Add button */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
                 onPress={onAddPress}
                 activeOpacity={0.8}
                 style={{
@@ -39,7 +39,7 @@ export const SalesOrderHeader = ({
                 }}
             >
                 <Ionicons name="add" size={22} color="#fff" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
         </View>
     );
 };

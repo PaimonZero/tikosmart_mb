@@ -9,7 +9,7 @@ import {
 import { useSalesOrderRouteGuard } from "@/hooks/useSalesOrderPermissions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchSalesOrders, resetSalesOrders } from "@/store/salesOrdersSlice";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 //'draft','pending_preparation','assigned_preparation',
@@ -43,10 +43,16 @@ export default function SalesOrdersListScreen() {
     const [keyword, setKeyword] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState("");
+    // Ref để bỏ qua lần chạy đầu tiên khi mount (Effect selectedStatus đã lo việc đó)
+    const isFirstRender = useRef(true);
 
     // Debounce: auto-search 500ms after user stops typing
     useEffect(() => {
         if (!canViewList) return;
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return; // bỏ qua mount, tránh fetch trùng với effect selectedStatus
+        }
         const timer = setTimeout(() => {
             dispatch(resetSalesOrders());
             loadData(0, keyword, selectedStatus);

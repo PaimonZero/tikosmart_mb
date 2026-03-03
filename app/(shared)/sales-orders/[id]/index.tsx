@@ -1,16 +1,17 @@
-import { SalesOrderBottomBar } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderBottomBar";
 import { SalesOrderCustomerCard } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderCustomerCard";
 import { SalesOrderDetailHeader } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderDetailHeader";
+import { SalesOrderDetailSkeleton } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderDetailSkeleton";
 import { SalesOrderDetailTabBar } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderDetailTabBar";
 import { SalesOrderHistoryRow } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderHistoryRow";
 import { SalesOrderOrderInfo } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderOrderInfo";
 import { SalesOrderProductsSection } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderProductsSection";
+import { useInvoiceTabPermission } from "@/hooks/useInvoicePermissions";
 import { useSalesOrderRouteGuard } from "@/hooks/useSalesOrderPermissions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchSalesOrderById, SalesOrder } from "@/store/salesOrdersSlice";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const DETAIL_TABS = [
@@ -21,6 +22,7 @@ const DETAIL_TABS = [
 
 export default function SalesOrderDetailScreen() {
     useSalesOrderRouteGuard("view_detail");
+    const { canViewInvoice } = useInvoiceTabPermission();
     const { id } = useLocalSearchParams();
     const [activeTab, setActiveTab] = useState("detail");
 
@@ -36,24 +38,18 @@ export default function SalesOrderDetailScreen() {
         }
     }, [id, dispatch]);
 
-    // Tab labels with count
-    const tabs = DETAIL_TABS.map((t) => {
-        if (t.key === "products" && order?.items) {
-            return { ...t, label: `Sản phẩm (${order.items.length})` };
-        }
-        return t;
-    });
+    // Tab labels with count; ẩn tab invoice nếu không có quyền
+    const tabs = DETAIL_TABS
+        .filter((t) => t.key !== "invoice" || canViewInvoice)
+        .map((t) => {
+            if (t.key === "products" && order?.items) {
+                return { ...t, label: `Sản phẩm (${order.items.length})` };
+            }
+            return t;
+        });
 
     if (fetchStatus === "loading" && !order) {
-        return (
-            <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-                <SalesOrderDetailHeader orderNo="..." status="" />
-                <View className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color="#2563EB" />
-                    <Text className="mt-4 text-gray-500 font-medium">Đang tải chi tiết đơn hàng...</Text>
-                </View>
-            </SafeAreaView>
-        );
+        return <SalesOrderDetailSkeleton />;
     }
 
     if (fetchError || (!order && fetchStatus !== "loading")) {
@@ -109,14 +105,20 @@ export default function SalesOrderDetailScreen() {
                 )}
 
                 {activeTab === "invoice" && (
-                    <View className="flex-1 justify-center items-center pt-20 px-6">
-                        <Text className="text-gray-400 text-base text-center">Chưa có hóa đơn</Text>
-                    </View>
+                    canViewInvoice ? (
+                        <View className="flex-1 justify-center items-center pt-20 px-6">
+                            <Text className="text-gray-400 text-base text-center">Chưa có hóa đơn</Text>
+                        </View>
+                    ) : (
+                        <View className="flex-1 justify-center items-center pt-20 px-6">
+                            <Text className="text-red-400 text-base text-center font-medium">Bạn không có quyền xem hóa đơn</Text>
+                        </View>
+                    )
                 )}
             </ScrollView>
 
             {/* Bottom Bar */}
-            <SalesOrderBottomBar onPrint={() => { }} onEdit={() => { }} />
+            {/* <SalesOrderBottomBar onPrint={() => { }} onEdit={() => { }} /> */}
         </SafeAreaView>
     );
 }
