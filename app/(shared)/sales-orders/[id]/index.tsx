@@ -116,7 +116,7 @@ export default function SalesOrderDetailScreen() {
             </ScrollView>
 
             {/* Bottom Bar */}
-            <SalesOrderBottomBar />
+            <SalesOrderBottomBar onPrint={() => { }} onEdit={() => { }} />
         </SafeAreaView>
     );
 }

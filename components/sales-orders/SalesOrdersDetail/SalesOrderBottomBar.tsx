@@ -4,11 +4,10 @@ import { Text, TouchableOpacity, View } from "react-native";
 
 interface SalesOrderBottomBarProps {
     onPrint?: () => void;
-    onCopy?: () => void;
     onEdit?: () => void;
 }
 
-export const SalesOrderBottomBar = ({ onPrint, onCopy, onEdit }: SalesOrderBottomBarProps) => {
+export const SalesOrderBottomBar = ({ onPrint, onEdit }: SalesOrderBottomBarProps) => {
     return (
         <View
             className="bg-white flex-row items-center px-4 py-3 border-t border-gray-100"
