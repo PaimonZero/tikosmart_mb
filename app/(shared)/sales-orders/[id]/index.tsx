@@ -3,6 +3,7 @@ import { SalesOrderDetailHeader } from "@/components/sales-orders/SalesOrdersDet
 import { SalesOrderDetailSkeleton } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderDetailSkeleton";
 import { SalesOrderDetailTabBar } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderDetailTabBar";
 import { SalesOrderHistoryRow } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderHistoryRow";
+import { SalesOrderInvoiceTab } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderInvoiceTab";
 import { SalesOrderOrderInfo } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderOrderInfo";
 import { SalesOrderProductsSection } from "@/components/sales-orders/SalesOrdersDetail/SalesOrderProductsSection";
 import { useInvoiceTabPermission } from "@/hooks/useInvoicePermissions";
@@ -104,16 +105,8 @@ export default function SalesOrderDetailScreen() {
                     <SalesOrderProductsSection items={order.items as any} showAll />
                 )}
 
-                {activeTab === "invoice" && (
-                    canViewInvoice ? (
-                        <View className="flex-1 justify-center items-center pt-20 px-6">
-                            <Text className="text-gray-400 text-base text-center">Chưa có hóa đơn</Text>
-                        </View>
-                    ) : (
-                        <View className="flex-1 justify-center items-center pt-20 px-6">
-                            <Text className="text-red-400 text-base text-center font-medium">Bạn không có quyền xem hóa đơn</Text>
-                        </View>
-                    )
+                {activeTab === "invoice" && canViewInvoice && (
+                    <SalesOrderInvoiceTab orderId={order.id} />
                 )}
             </ScrollView>
 
