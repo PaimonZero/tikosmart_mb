@@ -14,6 +14,12 @@ export default function SharedLayout() {
                     title: 'Quản lý sản phẩm',
                 }}
             />
+            <Stack.Screen
+                name="sales-orders"
+                options={{
+                    title: 'Đơn hàng bán',
+                }}
+            />
         </Stack>
     );
 }

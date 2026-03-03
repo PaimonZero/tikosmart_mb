@@ -5,6 +5,7 @@ import { HapticTab } from "@/components/haptic-tab";
 import CustomHomeHeader from "@/components/homepage/CustomHomeHeader";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppSelector } from "@/store/hooks";
+import { Feather } from "@expo/vector-icons";
 
 export default function SupShipperTabLayout() {
     const { isAuthenticated, hasHydrated } = useAppSelector((s) => s.auth);
@@ -30,6 +31,16 @@ export default function SupShipperTabLayout() {
                         <IconSymbol size={28} name="house.fill" color={color} />
                     ),
                     header: () => <CustomHomeHeader />,
+                }}
+            />
+            <Tabs.Screen
+                name="salesOrders"
+                options={{
+                    title: "Đơn hàng",
+                    tabBarIcon: ({ color }) => (
+                        <Feather name="shopping-cart" size={24} color={color} />
+                    ),
+                    headerShown: false,
                 }}
             />
             <Tabs.Screen
