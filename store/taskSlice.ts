@@ -102,6 +102,19 @@ export const fetchTasks = createAsyncThunk(
   },
 );
 
+// 📋 Lấy thêm danh sách tasks (Pagination / Infinite Scroll)
+export const fetchMoreTasks = createAsyncThunk(
+  "tasks/fetchMoreList",
+  async (params: TaskParams = {}, { rejectWithValue }) => {
+    try {
+      const res = await listTasksAPI(params);
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  },
+);
+
 // 🔍 Lấy chi tiết task
 export const fetchTaskById = createAsyncThunk(
   "tasks/fetchById",
@@ -336,6 +349,37 @@ const taskSlice = createSlice({
       })
       .addCase(fetchTasks.rejected, (state, action) => {
         state.fetchStatus = "failed";
+        state.fetchError =
+          (action.payload as any)?.message || action.error.message;
+      })
+
+      /* -------- FETCH MORE LIST (INFINITE SCROLL) -------- */
+      .addCase(fetchMoreTasks.pending, (state) => {
+        // Not setting "loading" to avoid replacing the big full-screen loader
+        // Could add a fetchMoreStatus in the future if needed
+      })
+      .addCase(fetchMoreTasks.fulfilled, (state, action) => {
+        const newData = action.payload?.data || action.payload || [];
+        // Extract array if it was wrapped or append directly
+        const freshItems = Array.isArray(newData) ? newData : [];
+
+        // Appending to the existing array safely based on structure
+        if ((state.tasks as any).data) {
+          (state.tasks as any).data = [
+            ...(state.tasks as any).data,
+            ...freshItems,
+          ];
+          // Also update pagination meta if provided by payload
+          if (action.payload?.total !== undefined) {
+            (state.tasks as any).total = action.payload.total;
+          }
+        } else if (Array.isArray(state.tasks)) {
+          state.tasks = [...state.tasks, ...freshItems];
+        } else {
+          state.tasks = action.payload;
+        }
+      })
+      .addCase(fetchMoreTasks.rejected, (state, action) => {
         state.fetchError =
           (action.payload as any)?.message || action.error.message;
       })
