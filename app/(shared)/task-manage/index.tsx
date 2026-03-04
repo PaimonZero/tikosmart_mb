@@ -4,10 +4,10 @@ import { fetchMoreTasks, fetchTasks } from '@/store/taskSlice';
 import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import TaskList from '@/components/task-manage/TaskList';
-import TaskListSkeleton from '@/components/task-manage/TaskListSkeleton';
-import TaskManageHeader from '@/components/task-manage/TaskManageHeader';
-import TaskToolbar from '@/components/task-manage/TaskToolbar';
+import TaskList from '@/components/task-manage/TaskList/TaskList';
+import TaskListSkeleton from '@/components/task-manage/TaskList/TaskListSkeleton';
+import TaskManageHeader from '@/components/task-manage/TaskList/TaskManageHeader';
+import TaskToolbar from '@/components/task-manage/TaskList/TaskToolbar';
 
 export default function TaskManageScreen() {
     // 1. Guard access (Requires valid role to view)
