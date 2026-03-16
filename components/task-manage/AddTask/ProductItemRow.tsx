@@ -2,7 +2,7 @@ import LotPickerSheet, { LotItem } from '@/components/task-manage/AddTask/LotPic
 import { TaskItemRow } from '@/hooks/useTaskSubmit';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
-import { Box, Minus, Plus, Trash2 } from 'lucide-react-native';
+import { Box, CornerDownRight, Layers, Minus, Plus, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ImageView from 'react-native-image-viewing';
@@ -61,11 +61,15 @@ const ProductItemRow = ({
         }
     }, [item.key, maxQty, onChange]);
 
-    return (
-        <View className={`bg-white mb-2 mx-2 rounded-xl border overflow-hidden ${isSubRow ? 'border-dashed border-indigo-200' : 'border-gray-200'} shadow-sm`}>
+    const renderCard = () => (
+        <View className={`bg-white mb-2 rounded-xl border overflow-hidden ${
+            isSubRow 
+                ? 'border-dashed border-indigo-200 bg-indigo-50/20 shadow-none' 
+                : 'border-gray-200 shadow-sm'
+        }`}>
             {/* Product name header */}
-            <View className={`px-4 pt-3 pb-3 flex-row items-center ${isSubRow ? 'bg-indigo-50' : 'bg-gray-50'} border-b border-gray-100`}>
-                {item.image ? (
+            <View className={`px-4 pt-3 pb-3 flex-row items-center ${isSubRow ? 'bg-indigo-100/30' : 'bg-gray-50'} border-b border-gray-100`}>
+                {item.image && !isSubRow ? (
                     <>
                         <TouchableOpacity activeOpacity={0.8} onPress={() => setIsImageViewerVisible(true)}>
                             <Image
@@ -85,15 +89,30 @@ const ProductItemRow = ({
                         />
                     </>
                 ) : (
-                    <View className="w-10 h-10 rounded-md bg-gray-200 items-center justify-center mr-3 border border-gray-300">
-                        <Box size={20} color={isSubRow ? '#4F46E5' : '#9CA3AF'} />
+                    <View className={`w-10 h-10 rounded-md items-center justify-center mr-3 border ${
+                        isSubRow ? 'bg-indigo-100 border-indigo-200' : 'bg-gray-200 border-gray-300'
+                    }`}>
+                        {isSubRow ? (
+                            <Layers size={20} color="#4F46E5" />
+                        ) : (
+                            <Box size={20} color="#9CA3AF" />
+                        )}
                     </View>
                 )}
 
                 <View className="flex-1 justify-center ml-2">
-                    <Text className={`text-base font-bold leading-tight ${isSubRow ? 'text-indigo-700' : 'text-gray-800'}`} numberOfLines={2}>
-                        {item.productName}
-                    </Text>
+                    <View className="flex-row items-center flex-wrap">
+                        <Text className={`text-base font-bold leading-tight mr-2 ${
+                            isSubRow ? 'text-indigo-600/80 font-semibold' : 'text-gray-800'
+                        }`} numberOfLines={1}>
+                            {item.productName}
+                        </Text>
+                        {isSubRow && (
+                            <View className="bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200">
+                                <Text className="text-[10px] font-bold text-indigo-600 uppercase">Lô bổ sung</Text>
+                            </View>
+                        )}
+                    </View>
                     {item.sku && (
                         <Text className="text-xs text-gray-500 mt-0.5">{item.sku}</Text>
                     )}
@@ -206,6 +225,25 @@ const ProductItemRow = ({
                     onLotFetched(item.orderItemId, lots.length ? lots : [lot]);
                 }}
             />
+        </View>
+    );
+
+    if (isSubRow) {
+        return (
+            <View className="flex-row items-start mx-2 mb-2">
+                <View className="w-8 items-center pt-2">
+                    <CornerDownRight size={22} color="#C7D2FE" />
+                </View>
+                <View className="flex-1">
+                    {renderCard()}
+                </View>
+            </View>
+        );
+    }
+
+    return (
+        <View className="mx-2 mb-2">
+            {renderCard()}
         </View>
     );
 };

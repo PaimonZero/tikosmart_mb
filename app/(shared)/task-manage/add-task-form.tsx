@@ -123,7 +123,13 @@ export default function AddTaskFormScreen() {
             preQty: 0,
             note: '',
         };
-        setItems((prev) => [...prev, newRow]);
+        setItems((prev) => {
+            const index = prev.findIndex((i) => i.key === item.key);
+            if (index === -1) return [...prev, newRow];
+            const newItems = [...prev];
+            newItems.splice(index + 1, 0, newRow);
+            return newItems;
+        });
     }, []);
 
     const handleDeleteRow = useCallback((key: string) => {
