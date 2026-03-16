@@ -257,7 +257,6 @@ export const updateTransactionWithoutPrice = (
   id: string,
   transactionData: UpdateTransactionNoPriceData,
 ) => {
-  console.log("Updating transaction without price:", id, transactionData);
   return apiClient.put(
     `/supplier-transactions-combined/manager/${id}`,
     transactionData,

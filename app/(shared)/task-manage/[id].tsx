@@ -22,6 +22,7 @@ import { useTaskPermission } from "@/hooks/useTaskPermission";
 import TaskActionFooter from "@/components/task-manage/TaskDetail/TaskActionFooter";
 import TaskDetailSkeleton from "@/components/task-manage/TaskDetail/TaskDetailSkeleton";
 import TaskInfoCards from "@/components/task-manage/TaskDetail/TaskInfoCards";
+import TaskReviewInfo from "@/components/task-manage/TaskDetail/TaskReviewInfo";
 import TaskProductList from "@/components/task-manage/TaskDetail/TaskProductList";
 import TaskTimeline from "@/components/task-manage/TaskDetail/TaskTimeline";
 import StatusBadge from "@/components/task-manage/TaskList/StatusBadge";
@@ -38,12 +39,16 @@ export default function TaskDetailScreen() {
     // Access control hook
     const { canView, canCancelTask, canEdit } = useTaskPermission();
 
+    const { selectedTask: taskDetail } = useAppSelector((state) => state.task);
+    const { salesOrdersById: orderDetail } = useAppSelector((state) => state.salesOrders);
+
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
 
-    const [taskDetail, setTaskDetail] = useState<any>(null);
-    const [taskItems, setTaskItems] = useState<any[]>([]);
-    const [orderDetail, setOrderDetail] = useState<any>(null);
+    // Derived taskItems from taskDetail
+    const taskItems = (taskDetail as any)?.items || [];
+    
+    // Maps still local for convenience as they are dictionaries of specific IDs
     const [lotInfoMap, setLotInfoMap] = useState<Record<string, any>>({});
     const [productInfoMap, setProductInfoMap] = useState<Record<string, any>>({});
 
@@ -51,51 +56,19 @@ export default function TaskDetailScreen() {
         if (!taskIdParam) return;
         setLoading(true);
         try {
-            // Fetch Task details
+            // Fetch Task details (updates state.tasks.selectedTask in Redux)
             const res = await dispatch(fetchTaskById(taskIdParam as string)).unwrap();
             const data = res?.data || res;
-            setTaskDetail(data);
-
+            
             const items = res?.items || data?.items || [];
-            setTaskItems(items);
 
-            // Fetch lots
-            const lotIds = items.map((i: any) => i.lotId).filter(Boolean);
-            const lMap: Record<string, any> = {};
-            if (lotIds.length > 0) {
-                const results = await Promise.allSettled(
-                    lotIds.map((lotId: string) => dispatch(fetchInventoryLotById(lotId)).unwrap())
-                );
-                results.forEach((r, idx) => {
-                    if (r.status === "fulfilled") {
-                        lMap[lotIds[idx]] = r.value?.data || r.value;
-                    }
-                });
-                setLotInfoMap(lMap);
-            }
-
-            // Fetch products based on lot.productId
-            const productIds = Object.values(lMap)
-                .map((lot: any) => lot?.productId)
-                .filter((v: any, i: number, a: any[]) => v && a.indexOf(v) === i);
-
-            if (productIds.length > 0) {
-                const productPromises = productIds.map((pId: string) => dispatch(fetchProductById(pId)).unwrap());
-                const productResults = await Promise.allSettled(productPromises);
-                const pMap: Record<string, any> = {};
-                productResults.forEach((r, idx) => {
-                    if (r.status === "fulfilled") {
-                        pMap[productIds[idx]] = r.value?.data || r.value;
-                    }
-                });
-                setProductInfoMap(pMap);
-            }
-
-            // Fetch Sales Order
+            // Fetch Sales Order (updates state.salesOrders.salesOrdersById in Redux)
             if (data?.orderId) {
-                const orderRes = await dispatch(fetchSalesOrderById(data.orderId)).unwrap();
-                setOrderDetail(orderRes?.data || orderRes);
+                await dispatch(fetchSalesOrderById(data.orderId)).unwrap();
             }
+
+            // Fetch info for lots and products
+            await fetchMissingInfo(items);
         } catch (error) {
             console.error("Failed to load task details", error);
             Alert.alert("Lỗi", "Không thể tải chi tiết nhiệm vụ.");
@@ -103,6 +76,49 @@ export default function TaskDetailScreen() {
             setLoading(false);
         }
     };
+
+    const fetchMissingInfo = async (items: any[]) => {
+        const lotIds = items.map((i: any) => i.lotId).filter((id) => id && !lotInfoMap[id]);
+        const lMap = { ...lotInfoMap };
+        
+        if (lotIds.length > 0) {
+            const results = await Promise.allSettled(
+                lotIds.map((lotId: string) => dispatch(fetchInventoryLotById(lotId)).unwrap())
+            );
+            results.forEach((r, idx) => {
+                if (r.status === "fulfilled") {
+                    lMap[lotIds[idx]] = r.value?.data || r.value;
+                }
+            });
+            setLotInfoMap(lMap);
+        }
+
+        // Fetch missing products based on lot.productId
+        // USE lMap HERE instead of lotInfoMap to avoid race condition/stale state
+        const currentLots = items.map(i => lMap[i.lotId]).filter(Boolean);
+        const productIds = currentLots
+            .map((lot: any) => lot?.productId)
+            .filter((v: any, i: number, a: any[]) => v && a.indexOf(v) === i && !productInfoMap[v]);
+
+        if (productIds.length > 0) {
+            const productPromises = productIds.map((pId: string) => dispatch(fetchProductById(pId)).unwrap());
+            const productResults = await Promise.allSettled(productPromises);
+            const pMap = { ...productInfoMap };
+            productResults.forEach((r, idx) => {
+                if (r.status === "fulfilled") {
+                    pMap[productIds[idx]] = r.value?.data || r.value;
+                }
+            });
+            setProductInfoMap(pMap);
+        }
+    };
+
+    // Auto-refresh missing info when taskItems change (e.g. from realtime update)
+    React.useEffect(() => {
+        if (taskItems && taskItems.length > 0) {
+            fetchMissingInfo(taskItems);
+        }
+    }, [taskItems]);
 
     useFocusEffect(
         useCallback(() => {
@@ -116,7 +132,7 @@ export default function TaskDetailScreen() {
         }, [taskIdParam, canView])
     );
 
-    const isCancelled = taskDetail?.status === "cancelled" || orderDetail?.status === "cancelled";
+    const isCancelled = (taskDetail as any)?.status === "cancelled" || (orderDetail as any)?.status === "cancelled";
 
     if (!canView) return null;
 
@@ -124,7 +140,10 @@ export default function TaskDetailScreen() {
         return <TaskDetailSkeleton />;
     }
 
-    if (!taskDetail && !loading) {
+    const taskData = taskDetail as any;
+    const orderData = orderDetail as any;
+
+    if (!taskData && !loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50">
                 <View className="px-4 py-3 flex-row items-center border-b border-gray-100 bg-white">
@@ -153,31 +172,33 @@ export default function TaskDetailScreen() {
                         Mã nhiệm vụ:
                     </Text>
                     <View className="bg-blue-100 px-1.5 py-1 rounded ml-2 flex-shrink-0">
-                        <Text className="text-sm font-bold text-blue-600">#{taskDetail.id.slice(0, 8) || "Không rõ"}</Text>
+                        <Text className="text-sm font-bold text-blue-600">#{taskData.id?.slice(0, 8) || "Không rõ"}</Text>
                     </View>
                 </View>
                 <View className="ml-2 flex-row items-center gap-2">
-                    <StatusBadge status={taskDetail.status} />
+                    <StatusBadge status={taskData.status} />
                 </View>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
-                <TaskTimeline taskDetail={taskDetail} isCancelled={isCancelled} />
+                <TaskTimeline taskDetail={taskData} isCancelled={isCancelled} />
+                {taskData?.review && (
+                    <TaskReviewInfo review={taskData.review} />
+                )}
 
                 <TaskInfoCards 
-                    taskDetail={taskDetail} 
-                    orderDetail={orderDetail} 
+                    taskDetail={taskData} 
+                    orderDetail={orderData} 
                     canEdit={canEdit}
-                    onEdit={() => router.push(`/(shared)/task-manage/${taskDetail.id}/edit` as any)}
+                    onEdit={() => router.push(`/(shared)/task-manage/${taskData.id}/edit` as any)}
                 />
 
-                {/* Review Info box can be added here replacing TaskReviewInfo if it exists */}
 
                 <TaskProductList
                     taskItems={taskItems}
                     userRole={userRole}
-                    taskDetail={taskDetail}
+                    taskDetail={taskData}
                     lotInfoMap={lotInfoMap}
                     productInfoMap={productInfoMap}
                 />
@@ -188,12 +209,12 @@ export default function TaskDetailScreen() {
 
             {/* Sticky Actions Footer */}
             <TaskActionFooter
-                taskDetail={taskDetail}
-                orderDetail={orderDetail}
+                taskDetail={taskData}
+                orderDetail={orderData}
                 userRole={userRole}
                 canCancelTask={canCancelTask}
                 canEdit={canEdit}
-                onEdit={() => router.push(`/(shared)/task-manage/${taskDetail.id}/edit` as any)}
+                onEdit={() => router.push(`/(shared)/task-manage/${taskData.id}/edit` as any)}
                 updating={updating}
                 setUpdating={setUpdating}
                 onSuccess={loadData}

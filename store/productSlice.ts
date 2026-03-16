@@ -313,6 +313,34 @@ const productSlice = createSlice({
       state.updateError = null;
       state.deleteError = null;
     },
+    // Real-time actions
+    addProduct: (state, action) => {
+      const newProduct = action.payload;
+      if (state.products && Array.isArray(state.products)) {
+        state.products.unshift(newProduct);
+        state.productsPagination.total += 1;
+      }
+    },
+    updateProductRealtime: (state, action) => {
+      const updatedProduct = action.payload;
+      // Update in list
+      const index = state.products.findIndex((p) => p.id === updatedProduct.id);
+      if (index !== -1) {
+        state.products[index] = { ...state.products[index], ...updatedProduct };
+      }
+      // Update single product if viewing
+      if (state.product && state.product.id === updatedProduct.id) {
+        state.product = { ...state.product, ...updatedProduct };
+      }
+    },
+    removeProductRealtime: (state, action) => {
+      const deletedId = action.payload;
+      const initialLength = state.products.length;
+      state.products = state.products.filter((p) => p.id !== deletedId);
+      if (state.products.length < initialLength) {
+        state.productsPagination.total -= 1;
+      }
+    },
   },
   extraReducers: (builder) => {
     // --- Select Products (Infinite Scroll) ---
@@ -562,7 +590,13 @@ const productSlice = createSlice({
   },
 });
 
-export const { resetSelectProducts, clearProductErrors, clearProducts } =
-  productSlice.actions;
+export const {
+  resetSelectProducts,
+  clearProductErrors,
+  clearProducts,
+  addProduct,
+  updateProductRealtime,
+  removeProductRealtime,
+} = productSlice.actions;
 
 export default productSlice.reducer;

@@ -336,6 +336,51 @@ const taskSlice = createSlice({
     clearTaskItems: (state) => {
       state.taskItems = [];
     },
+    // Real-time actions
+    addPreparationTaskRealtime: (state, action) => {
+      const newTask = action.payload;
+      if (Array.isArray(state.tasks)) {
+        state.tasks.unshift(newTask);
+      } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
+        (state.tasks as any).data.unshift(newTask);
+        if ((state.tasks as any).pagination) {
+          (state.tasks as any).pagination.total += 1;
+        }
+      }
+    },
+    updatePreparationTaskRealtime: (state, action) => {
+      const updatedTask = action.payload;
+      // Update in list
+      if (Array.isArray(state.tasks)) {
+        const idx = state.tasks.findIndex((t) => t.id === updatedTask.id);
+        if (idx !== -1) {
+          state.tasks[idx] = { ...state.tasks[idx], ...updatedTask };
+        }
+      } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
+        const idx = (state.tasks as any).data.findIndex((t: any) => t.id === updatedTask.id);
+        if (idx !== -1) {
+          (state.tasks as any).data[idx] = { ...(state.tasks as any).data[idx], ...updatedTask };
+        }
+      }
+      // Update selectedTask if viewing
+      if (state.selectedTask && state.selectedTask.id === updatedTask.id) {
+        state.selectedTask = { ...state.selectedTask, ...updatedTask };
+      }
+    },
+    deletePreparationTaskRealtime: (state, action) => {
+      const deletedId = typeof action.payload === 'object' ? action.payload.id : action.payload;
+      if (Array.isArray(state.tasks)) {
+        const initialLength = state.tasks.length;
+        state.tasks = state.tasks.filter((t) => t.id !== deletedId);
+        // ... update total if needed
+      } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
+        const initialLength = (state.tasks as any).data.length;
+        (state.tasks as any).data = (state.tasks as any).data.filter((t: any) => t.id !== deletedId);
+        if ((state.tasks as any).data.length < initialLength && (state.tasks as any).pagination) {
+          (state.tasks as any).pagination.total -= 1;
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -391,7 +436,10 @@ const taskSlice = createSlice({
       })
       .addCase(fetchTaskById.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        state.selectedTask = action.payload?.data || ({} as any);
+        const payload = action.payload;
+        const data = payload?.data || payload;
+        const items = payload?.items || data?.items || [];
+        state.selectedTask = { ...(data || {}), items };
       })
       .addCase(fetchTaskById.rejected, (state, action) => {
         state.fetchStatus = "failed";
@@ -659,5 +707,11 @@ const taskSlice = createSlice({
   },
 });
 
-export const { clearSelectedTask, clearTaskItems } = taskSlice.actions;
+export const { 
+  clearSelectedTask, 
+  clearTaskItems, 
+  addPreparationTaskRealtime, 
+  updatePreparationTaskRealtime, 
+  deletePreparationTaskRealtime 
+} = taskSlice.actions;
 export default taskSlice.reducer;

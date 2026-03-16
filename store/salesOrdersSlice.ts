@@ -149,6 +149,60 @@ const salesOrdersSlice = createSlice({
       state.fetchStatus = "idle";
       state.fetchError = null;
     },
+    addSalesOrderRealtime: (state, action) => {
+      const newOrder = action.payload;
+      if (state.salesOrders && Array.isArray(state.salesOrders.data)) {
+        // Prevent duplicates
+        const exists = state.salesOrders.data.some((o) => o.id === newOrder.id);
+        if (exists) return;
+
+        state.salesOrders.data.unshift(newOrder);
+        if (state.salesOrders.pagination) {
+          state.salesOrders.pagination.total =
+            (state.salesOrders.pagination.total || 0) + 1;
+        }
+      } else if (state.salesOrders && !state.salesOrders.data) {
+        state.salesOrders.data = [newOrder];
+      }
+    },
+    updateSalesOrderRealtime: (state, action) => {
+      const updatedOrder = action.payload;
+      if (state.salesOrders && Array.isArray(state.salesOrders.data)) {
+        const index = state.salesOrders.data.findIndex(
+          (o) => o.id === updatedOrder.id,
+        );
+        if (index !== -1) {
+          state.salesOrders.data[index] = {
+            ...state.salesOrders.data[index],
+            ...updatedOrder,
+          };
+        }
+      }
+      if (
+        state.salesOrdersById &&
+        (state.salesOrdersById as any).id === updatedOrder.id
+      ) {
+        state.salesOrdersById = { ...state.salesOrdersById, ...updatedOrder };
+      }
+    },
+    deleteSalesOrderRealtime: (state, action) => {
+      const { id } = action.payload;
+      if (state.salesOrders && Array.isArray(state.salesOrders.data)) {
+        const initialLength = state.salesOrders.data.length;
+        state.salesOrders.data = state.salesOrders.data.filter(
+          (o) => o.id !== id,
+        );
+        if (
+          state.salesOrders.data.length < initialLength &&
+          state.salesOrders.pagination
+        ) {
+          state.salesOrders.pagination.total = Math.max(
+            (state.salesOrders.pagination.total || 1) - 1,
+            0,
+          );
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -256,5 +310,10 @@ const salesOrdersSlice = createSlice({
   },
 });
 
-export const { resetSalesOrders } = salesOrdersSlice.actions;
+export const {
+  resetSalesOrders,
+  addSalesOrderRealtime,
+  updateSalesOrderRealtime,
+  deleteSalesOrderRealtime,
+} = salesOrdersSlice.actions;
 export default salesOrdersSlice.reducer;
