@@ -1,6 +1,7 @@
 import { useAppDispatch } from '@/store/hooks';
 import { fetchInventoryLotsByDepartmentAndProduct } from '@/store/inventoryLotSlice';
 import {
+    BottomSheetBackdrop,
     BottomSheetFlatList,
     BottomSheetModal,
     BottomSheetView,
@@ -100,7 +101,17 @@ const LotPickerSheet = forwardRef<BottomSheetModal, LotPickerSheetProps>(
                 </TouchableOpacity>
             );
         }, [handleSelect]);
-
+        const renderBackdrop = useCallback(
+            (props: any) => (
+                <BottomSheetBackdrop
+                    {...props}
+                    disappearsOnIndex={-1}
+                    appearsOnIndex={0}
+                    opacity={0.5}
+                />
+            ),
+            []
+        );
         return (
             <BottomSheetModal
                 ref={ref}
@@ -108,6 +119,7 @@ const LotPickerSheet = forwardRef<BottomSheetModal, LotPickerSheetProps>(
                 index={0}
                 enableDynamicSizing={false}
                 enablePanDownToClose
+                backdropComponent={renderBackdrop}
                 handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
                 backgroundStyle={{
                     backgroundColor: '#FAFAFA',

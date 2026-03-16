@@ -1,4 +1,4 @@
-import { Calendar, ChevronDown, FileText, Forklift, MapPin, NotepadText, Phone, ShoppingCart, User, Users } from "lucide-react-native";
+import { Calendar, ChevronDown, FileText, Forklift, MapPin, NotepadText, Pencil, Phone, ShoppingCart, User, Users } from "lucide-react-native";
 import React, { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, withSpring } from "react-native-reanimated";
@@ -6,9 +6,11 @@ import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, 
 interface TaskInfoCardsProps {
     taskDetail: any;
     orderDetail: any;
+    canEdit?: boolean;
+    onEdit?: () => void;
 }
 
-export default function TaskInfoCards({ taskDetail, orderDetail }: TaskInfoCardsProps) {
+export default function TaskInfoCards({ taskDetail, orderDetail, canEdit, onEdit }: TaskInfoCardsProps) {
     const [isTaskVisible, setIsTaskVisible] = useState(true);
     const [isOrderVisible, setIsOrderVisible] = useState(false);
 
@@ -37,21 +39,35 @@ export default function TaskInfoCards({ taskDetail, orderDetail }: TaskInfoCards
         <View className="mt-2 gap-2">
             {/* Thẻ Thông tin Nhiệm vụ */}
             <View className="bg-white border border-gray-100 shadow-sm overflow-hidden">
-                <TouchableOpacity 
-                    activeOpacity={0.7}
-                    onPress={() => setIsTaskVisible(!isTaskVisible)}
-                    className="flex-row items-center justify-between p-5"
-                >
-                    <View className="flex-row items-center">
+                <View className="flex-row items-center justify-between p-5 border-b border-gray-50">
+                    <TouchableOpacity 
+                        activeOpacity={0.7}
+                        onPress={() => setIsTaskVisible(!isTaskVisible)}
+                        className="flex-row items-center flex-1"
+                    >
                         <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-3">
                             <FileText color="#3b82f6" size={20} />
                         </View>
                         <Text className="text-base font-bold text-gray-900">Thông tin nhiệm vụ</Text>
+                    </TouchableOpacity>
+
+                    <View className="flex-row items-center">
+                        {canEdit && (
+                            <TouchableOpacity
+                                onPress={onEdit}
+                                className="flex-row items-center bg-blue-50 px-3 py-1.5 rounded-lg mr-3 active:opacity-60"
+                            >
+                                <Pencil size={14} color="#2563eb" />
+                                <Text className="text-blue-600 text-sm font-bold ml-1">Sửa</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={() => setIsTaskVisible(!isTaskVisible)} activeOpacity={0.7}>
+                            <Animated.View style={taskIconStyle}>
+                                <ChevronDown size={20} color="#9ca3af" />
+                            </Animated.View>
+                        </TouchableOpacity>
                     </View>
-                    <Animated.View style={taskIconStyle}>
-                        <ChevronDown size={20} color="#9ca3af" />
-                    </Animated.View>
-                </TouchableOpacity>
+                </View>
 
                 {isTaskVisible && (
                     <Animated.View 

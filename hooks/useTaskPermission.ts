@@ -6,6 +6,7 @@ import { Alert } from "react-native";
 const TASK_PERMISSIONS = {
   view: ["admin", "manager", "picker", "sup_picker", "accountant"],
   add: ["admin", "sup_picker"],
+  edit: ["admin", "sup_picker"],
   cancel: ["admin", "manager", "sup_picker", "sup_shipper"],
 } as const;
 
@@ -16,6 +17,7 @@ export const useTaskPermission = () => {
 
   const canView = TASK_PERMISSIONS.view.includes(userRole as any);
   const canAdd = TASK_PERMISSIONS.add.includes(userRole as any);
+  const canEdit = TASK_PERMISSIONS.edit.includes(userRole as any);
   const canCancelTask = TASK_PERMISSIONS.cancel.includes(userRole as any);
 
   const navigateToDetail = (taskId: string | number) => {
@@ -37,6 +39,7 @@ export const useTaskPermission = () => {
   return {
     canView,
     canAdd,
+    canEdit,
     canCancelTask,
     userRole,
     user,
@@ -46,7 +49,7 @@ export const useTaskPermission = () => {
 };
 
 export const useTaskRouteGuard = (
-  requiredPermission: "view" | "add" = "view",
+  requiredPermission: "view" | "add" | "edit" = "view",
 ) => {
   const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();

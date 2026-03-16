@@ -18,7 +18,11 @@ export default function TaskManageLayout() {
             />
             <Stack.Screen
                 name="[id]/update-item"
-                options={{ title: "Cập nhật sản phẩm" }}
+                options={{ title: "Cập nhật sản phẩm soạn" }}
+            />
+            <Stack.Screen
+                name="[id]/edit"
+                options={{ title: "Cập nhật nhiệm vụ" }}
             />
             <Stack.Screen
                 name="add-task"

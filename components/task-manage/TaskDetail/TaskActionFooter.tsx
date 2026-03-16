@@ -1,4 +1,4 @@
-import { CheckCircle, PlayCircle, Send, XCircle } from "lucide-react-native";
+import { CheckCircle, Pencil, PlayCircle, Send, XCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import {
     KeyboardAvoidingView,
@@ -21,6 +21,8 @@ interface TaskActionFooterProps {
     orderDetail: any;
     userRole: string;
     canCancelTask: boolean;
+    canEdit: boolean;
+    onEdit: () => void;
     updating: boolean;
     setUpdating: (val: boolean) => void;
     onSuccess: () => void;
@@ -31,6 +33,8 @@ export default function TaskActionFooter({
     orderDetail,
     userRole,
     canCancelTask,
+    canEdit,
+    onEdit,
     updating,
     setUpdating,
     onSuccess,
@@ -100,82 +104,84 @@ export default function TaskActionFooter({
         }
     };
 
+    const renderFooterContainer = (children?: React.ReactNode) => (
+        <View className="absolute bottom-4 left-0 right-0 px-4 pb-4">
+            <View className="bg-white rounded-3xl p-4 shadow-2xl border border-gray-100">
+                {children}
+            </View>
+        </View>
+    );
+
     const renderStickyActions = () => {
         if (isCancelled || updating) return null;
 
         if (userRole === "picker" && taskDetail?.status === "assigned") {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg">
-                    <TouchableOpacity
-                        onPress={() => handleUpdateStatus("in_progress", "Bắt đầu thực hiện nhiệm vụ soạn hàng này?")}
-                        className="bg-blue-600 rounded-xl flex-row items-center justify-center py-3.5"
-                    >
-                        <PlayCircle color="white" size={20} />
-                        <Text className="text-white font-bold text-base ml-2">Bắt đầu làm</Text>
-                    </TouchableOpacity>
-                </View>
+            return renderFooterContainer(
+                <TouchableOpacity
+                    onPress={() => handleUpdateStatus("in_progress", "Bắt đầu thực hiện nhiệm vụ soạn hàng này?")}
+                    className="bg-blue-600 rounded-2xl flex-row items-center justify-center py-4"
+                >
+                    <PlayCircle color="white" size={20} />
+                    <Text className="text-white font-black text-base ml-2">Bắt đầu làm</Text>
+                </TouchableOpacity>
             );
         }
 
         if (userRole === "picker" && taskDetail?.status === "in_progress") {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg">
-                    <TouchableOpacity
-                        onPress={() => handleUpdateStatus("pending_review", "Xác nhận gửi yêu cầu duyệt nhiệm vụ này?")}
-                        className="bg-amber-500 rounded-xl flex-row items-center justify-center py-3.5"
-                    >
-                        <Send color="white" size={20} />
-                        <Text className="text-white font-bold text-base ml-2">Gửi Yêu Cầu Duyệt</Text>
-                    </TouchableOpacity>
-                </View>
+            return renderFooterContainer(
+                <TouchableOpacity
+                    onPress={() => handleUpdateStatus("pending_review", "Xác nhận gửi yêu cầu duyệt nhiệm vụ này?")}
+                    className="bg-amber-500 rounded-2xl flex-row items-center justify-center py-4 shadow-sm"
+                >
+                    <Send color="white" size={20} />
+                    <Text className="text-white font-black text-base ml-2">Gửi Yêu Cầu Duyệt</Text>
+                </TouchableOpacity>
             );
         }
 
         if (userRole !== "picker" && taskDetail?.status === "pending_review") {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg">
-                    <View className="flex-row space-x-3">
+            return renderFooterContainer(
+                <>
+                    <View className="flex-row space-x-3 gap-3">
                         <TouchableOpacity
-                            className="flex-1 bg-green-600 rounded-xl flex-row items-center justify-center py-3.5"
+                            className="flex-1 bg-green-600 rounded-2xl flex-row items-center justify-center py-4"
                             onPress={() => openReviewModal("confirmed")}
                         >
                             <CheckCircle color="white" size={20} />
-                            <Text className="text-white font-bold text-base ml-2">Duyệt</Text>
+                            <Text className="text-white font-black text-base ml-2">Duyệt</Text>
                         </TouchableOpacity>
-                        <View className="w-4" />
+                        
                         <TouchableOpacity
-                            className="flex-1 bg-red-500 rounded-xl flex-row items-center justify-center py-3.5"
+                            className="flex-1 bg-white rounded-2xl flex-row items-center justify-center py-4 border border-red-100"
                             onPress={() => openReviewModal("rejected")}
                         >
-                            <XCircle color="white" size={20} />
-                            <Text className="text-white font-bold text-base ml-2">Từ chối</Text>
+                            <XCircle color="#EF4444" size={20} />
+                            <Text className="text-red-500 font-black text-base ml-2">Từ chối</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {canCancelTask && (
+                    {canCancelTask ? (
                         <TouchableOpacity
                             onPress={() => handleUpdateStatus("cancelled", "Bạn có chắc muốn huỷ nhiệm vụ này?")}
-                            className="mt-3 bg-gray-100 rounded-xl flex-row items-center justify-center py-3.5 border border-gray-200"
+                            className="mt-3 bg-red-50 rounded-2xl flex-row items-center justify-center py-3 border border-red-100 active:opacity-60"
                         >
-                            <XCircle color="#EF4444" size={20} />
-                            <Text className="text-red-500 font-bold text-base ml-2">Huỷ nhiệm vụ</Text>
+                            <XCircle color="#EF4444" size={16} />
+                            <Text className="text-red-600 font-bold text-sm ml-2">Huỷ nhiệm vụ</Text>
                         </TouchableOpacity>
-                    )}
-                </View>
+                    ) : null}
+                </>
             );
         }
 
         if (canCancelTask) {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg">
-                    <TouchableOpacity
-                        onPress={() => handleUpdateStatus("cancelled", "Bạn có chắc muốn huỷ nhiệm vụ này?")}
-                        className="bg-gray-100 rounded-xl flex-row items-center justify-center py-3.5 border border-gray-200"
-                    >
-                        <XCircle color="#EF4444" size={20} />
-                        <Text className="text-red-500 font-bold text-base ml-2">Huỷ nhiệm vụ</Text>
-                    </TouchableOpacity>
-                </View>
+            return renderFooterContainer(
+                <TouchableOpacity
+                    onPress={() => handleUpdateStatus("cancelled", "Bạn có chắc muốn huỷ nhiệm vụ này?")}
+                    className="bg-red-50 rounded-2xl flex-row items-center justify-center py-4 border border-red-100"
+                >
+                    <XCircle color="#EF4444" size={20} />
+                    <Text className="text-red-600 font-black text-base ml-2">Huỷ nhiệm vụ</Text>
+                </TouchableOpacity>
             );
         }
 

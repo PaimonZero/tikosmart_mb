@@ -1,6 +1,7 @@
 import { PackageOpen } from "lucide-react-native";
-import React from "react";
-import { Image, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Image, Text, TouchableOpacity, View } from "react-native";
+import ImageView from "react-native-image-viewing";
 
 interface ProductItemHeaderProps {
     productName: string;
@@ -19,6 +20,8 @@ export default function ProductItemHeader({
     preQty,
     postQty,
 }: ProductItemHeaderProps) {
+    const [viewerVisible, setViewerVisible] = useState(false);
+
     const qtyColor =
         postQty === preQty
             ? "text-green-600"
@@ -30,13 +33,17 @@ export default function ProductItemHeader({
         <>
             {/* Hình ảnh + Tên + SKU + ĐVT */}
             <View className="flex-row items-start mb-5">
-                <View className="w-20 h-20 rounded-2xl bg-gray-50 items-center justify-center mr-4 border border-gray-100 overflow-hidden">
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => imgUrl && setViewerVisible(true)}
+                    className="w-20 h-20 rounded-2xl bg-gray-50 items-center justify-center mr-4 border border-gray-100 overflow-hidden"
+                >
                     {imgUrl ? (
                         <Image source={{ uri: imgUrl }} className="w-full h-full" resizeMode="cover" />
                     ) : (
                         <PackageOpen color="#9ca3af" size={28} />
                     )}
-                </View>
+                </TouchableOpacity>
 
                 <View className="flex-1 min-h-[80px] justify-center">
                     <Text className="font-extrabold text-lg text-gray-900 leading-6 mb-2">
@@ -74,6 +81,15 @@ export default function ProductItemHeader({
                     </Text>
                 </View>
             </View>
+
+            {imgUrl && (
+                <ImageView
+                    images={[{ uri: imgUrl }]}
+                    imageIndex={0}
+                    visible={viewerVisible}
+                    onRequestClose={() => setViewerVisible(false)}
+                />
+            )}
         </>
     );
 }

@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
     Alert,
     ScrollView,
@@ -10,12 +10,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { taskSignal } from "@/services/taskSignal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchInventoryLotById } from "@/store/inventoryLotSlice";
 import { fetchProductById } from "@/store/productSlice";
 import { fetchSalesOrderById } from "@/store/salesOrdersSlice";
 import { fetchTaskById } from "@/store/taskSlice";
-import { taskSignal } from "@/services/taskSignal";
 // Make sure this hook exists per phase 1 plan
 import { useTaskPermission } from "@/hooks/useTaskPermission";
 
@@ -36,7 +36,7 @@ export default function TaskDetailScreen() {
     const isFirstRun = useRef(true);
 
     // Access control hook
-    const { canView, canCancelTask } = useTaskPermission();
+    const { canView, canCancelTask, canEdit } = useTaskPermission();
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -156,7 +156,7 @@ export default function TaskDetailScreen() {
                         <Text className="text-sm font-bold text-blue-600">#{taskDetail.id.slice(0, 8) || "Không rõ"}</Text>
                     </View>
                 </View>
-                <View className="ml-2 flex-shrink-0">
+                <View className="ml-2 flex-row items-center gap-2">
                     <StatusBadge status={taskDetail.status} />
                 </View>
             </View>
@@ -165,7 +165,12 @@ export default function TaskDetailScreen() {
 
                 <TaskTimeline taskDetail={taskDetail} isCancelled={isCancelled} />
 
-                <TaskInfoCards taskDetail={taskDetail} orderDetail={orderDetail} />
+                <TaskInfoCards 
+                    taskDetail={taskDetail} 
+                    orderDetail={orderDetail} 
+                    canEdit={canEdit}
+                    onEdit={() => router.push(`/(shared)/task-manage/${taskDetail.id}/edit` as any)}
+                />
 
                 {/* Review Info box can be added here replacing TaskReviewInfo if it exists */}
 
@@ -178,7 +183,7 @@ export default function TaskDetailScreen() {
                 />
 
                 {/* Padding bottom so content isn't hidden behind sticky action bar */}
-                <View className="h-44" />
+                <View className="h-52" />
             </ScrollView>
 
             {/* Sticky Actions Footer */}
@@ -187,6 +192,8 @@ export default function TaskDetailScreen() {
                 orderDetail={orderDetail}
                 userRole={userRole}
                 canCancelTask={canCancelTask}
+                canEdit={canEdit}
+                onEdit={() => router.push(`/(shared)/task-manage/${taskDetail.id}/edit` as any)}
                 updating={updating}
                 setUpdating={setUpdating}
                 onSuccess={loadData}
