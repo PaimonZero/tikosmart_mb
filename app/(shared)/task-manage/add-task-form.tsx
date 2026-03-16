@@ -207,14 +207,14 @@ export default function AddTaskFormScreen() {
                 </KeyboardAwareScrollView>
 
                 {/* ─── Sticky Footer ─── */}
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 shadow-lg">
+                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 pb-6 shadow-lg">
                     <TouchableOpacity
                         onPress={handleSubmit}
                         disabled={submitting}
                         activeOpacity={0.8}
                         className={`rounded-xl py-4 items-center ${submitting ? 'bg-blue-300' : 'bg-blue-600'}`}
                     >
-                        <Text className="text-white font-bold text-base">
+                        <Text className="text-white font-bold text-lg">
                             {submitting ? 'Đang tạo...' : 'Tạo nhiệm vụ'}
                         </Text>
                     </TouchableOpacity>
