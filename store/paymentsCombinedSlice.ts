@@ -138,7 +138,40 @@ export const updatePaymentCombined = createAsyncThunk(
 const paymentsCombinedSlice = createSlice({
   name: "paymentsCombined",
   initialState,
-  reducers: {},
+  reducers: {
+    // Real-time actions
+    addPaymentRealtime: (state, action) => {
+      const newPayment = action.payload;
+      if (state.paymentsCombinedData && Array.isArray(state.paymentsCombinedData.data)) {
+        state.paymentsCombinedData.data.unshift(newPayment);
+        if (state.paymentsCombinedData.pagination) {
+          state.paymentsCombinedData.pagination.total = (state.paymentsCombinedData.pagination.total || 0) + 1;
+        }
+      }
+    },
+    updatePaymentRealtime: (state, action) => {
+      const updatedPayment = action.payload;
+      if (state.paymentsCombinedData && Array.isArray(state.paymentsCombinedData.data)) {
+        const index = state.paymentsCombinedData.data.findIndex((p: any) => p.id === updatedPayment.id);
+        if (index !== -1) {
+          state.paymentsCombinedData.data[index] = { ...state.paymentsCombinedData.data[index], ...updatedPayment };
+        }
+      }
+      if (state.paymentDetail && (state.paymentDetail as any).id === updatedPayment.id) {
+        state.paymentDetail = { ...state.paymentDetail, ...updatedPayment };
+      }
+    },
+    removePaymentRealtime: (state, action) => {
+      const deletedId = action.payload;
+      if (state.paymentsCombinedData && Array.isArray(state.paymentsCombinedData.data)) {
+        const initialLength = state.paymentsCombinedData.data.length;
+        state.paymentsCombinedData.data = state.paymentsCombinedData.data.filter((p: any) => p.id !== deletedId);
+        if (state.paymentsCombinedData.data.length < initialLength && state.paymentsCombinedData.pagination) {
+          state.paymentsCombinedData.pagination.total = (state.paymentsCombinedData.pagination.total || 0) - 1;
+        }
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       // Fetch All Payments Combined
@@ -218,5 +251,6 @@ const paymentsCombinedSlice = createSlice({
       });
   },
 });
-export const {} = paymentsCombinedSlice.actions;
+export const { addPaymentRealtime, updatePaymentRealtime, removePaymentRealtime } =
+  paymentsCombinedSlice.actions;
 export default paymentsCombinedSlice.reducer;
