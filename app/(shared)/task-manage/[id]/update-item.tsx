@@ -1,14 +1,18 @@
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Camera, Save, UploadCloud } from "lucide-react-native";
+import { ArrowLeft, Camera, Eye, Save, UploadCloud } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import ImageViewing from "react-native-image-viewing";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import ImageSourceModal from "@/components/task-manage/TaskDetail/ImageSourceModal";
 import { useTaskPermission } from "@/hooks/useTaskPermission";
+import { uploadImage } from "@/services/uploadImageService";
+import { taskSignal } from "@/services/taskSignal";
 import { useAppDispatch } from "@/store/hooks";
 import { updateTaskItemByPicker } from "@/store/taskSlice";
+import { toast } from "sonner-native";
 
 type ImageType = "preEvd" | "postEvd" | null;
 
@@ -22,15 +26,20 @@ export default function UpdateTaskItemScreen() {
     const [preEvd, setPreEvd] = useState<string | null>(preEvdParam ? String(preEvdParam) : null);
     const [postEvd, setPostEvd] = useState<string | null>(postEvdParam ? String(postEvdParam) : null);
 
-    // File objects payload to pass to API
-    const [preEvdFile, setPreEvdFile] = useState<any>(null);
-    const [postEvdFile, setPostEvdFile] = useState<any>(null);
-
     const [isSaving, setIsSaving] = useState(false);
 
     // Bottom Sheet Control
     const [sheetVisible, setSheetVisible] = useState(false);
     const [targetImageType, setTargetImageType] = useState<ImageType>(null);
+
+    // Image Viewer Control
+    const [viewerVisible, setViewerVisible] = useState(false);
+    const [viewerImages, setViewerImages] = useState<{ uri: string }[]>([]);
+
+    const handleViewImage = (uri: string) => {
+        setViewerImages([{ uri }]);
+        setViewerVisible(true);
+    };
 
     // Initialize Local Settings
     useEffect(() => {
@@ -47,18 +56,11 @@ export default function UpdateTaskItemScreen() {
     const processImageSelection = (result: ImagePicker.ImagePickerResult) => {
         if (!result.canceled && result.assets && result.assets[0]) {
             const asset = result.assets[0];
-            const file = {
-                uri: asset.uri,
-                type: asset.mimeType || "image/jpeg",
-                name: asset.fileName || "evidence.jpg",
-            };
 
             if (targetImageType === "preEvd") {
                 setPreEvd(asset.uri);
-                setPreEvdFile(file);
             } else if (targetImageType === "postEvd") {
                 setPostEvd(asset.uri);
-                setPostEvdFile(file);
             }
         }
     };
@@ -98,30 +100,48 @@ export default function UpdateTaskItemScreen() {
         setIsSaving(true);
 
         try {
-            // Chuẩn bị FormData theo đúng config payload cho UpdateTaskItemData (nhận formData ở Backend)
-            const formData = new FormData();
-            formData.append("postQty", String(postQty));
+            let finalPreEvdUrl = preEvd;
+            let finalPostEvdUrl = postEvd;
 
-            if (preEvdFile) {
-                formData.append("preEvd", preEvdFile as any);
-            }
-            if (postEvdFile) {
-                formData.append("postEvd", postEvdFile as any);
+            // Nếu URIs là hình ảnh local (thường bắt đầu bằng file://) cần upload lên trước
+            if (preEvd && preEvd.startsWith("file://")) {
+                const uploadRes = await uploadImage(preEvd);
+                finalPreEvdUrl = uploadRes.url || uploadRes.data?.url; 
             }
 
-            // Gọi đúng thunk updateTaskItemByPicker đã định nghĩa trong taskSlice.ts
+            if (postEvd && postEvd.startsWith("file://")) {
+                const uploadRes = await uploadImage(postEvd);
+                finalPostEvdUrl = uploadRes.url || uploadRes.data?.url;
+            }
+
+            const payload: any = {
+                postQty: Number(postQty),
+            };
+
+            if (finalPreEvdUrl && !finalPreEvdUrl.startsWith("file://")) {
+                payload.preEvd = finalPreEvdUrl;
+            }
+
+            if (finalPostEvdUrl && !finalPostEvdUrl.startsWith("file://")) {
+                payload.postEvd = finalPostEvdUrl;
+            }
+
             await dispatch(updateTaskItemByPicker({
                 taskId: id as string,
                 itemId: itemId as string,
-                data: formData as any, // Ép kiểu vì data ban đầu định dạng interface là json nhưng axios/service sẽ xử lý formData
+                data: payload,
             })).unwrap();
 
-            Alert.alert("Thành công", "Đã lưu cập nhật sản phẩm.", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            toast.success("Thành công", { description: "Đã lưu cập nhật sản phẩm.", duration: 2000 });
+            
+            // Signal detail screen to refresh
+            taskSignal.shouldRefresh = true;
+            
+            // Go back to the existing detail screen in the stack
+            router.back();
 
         } catch (error: any) {
-            Alert.alert("Lỗi", error?.message || "Lỗi lưu cập nhật.");
+            toast.error("Lỗi", { description: error?.message || "Lỗi lưu cập nhật.", duration: 2000 });
         } finally {
             setIsSaving(false);
         }
@@ -168,51 +188,69 @@ export default function UpdateTaskItemScreen() {
                     {/* Evidences Section */}
                     <Text className="text-base font-bold text-gray-900 mb-2 mt-2">Ảnh minh chứng</Text>
 
-                    <View className="flex-row space-x-4 mb-8">
+                    <View className="flex-row gap-2 mb-8">
                         {/* Pre Evd */}
                         <View className="flex-1">
                             <Text className="text-sm text-gray-500 font-medium mb-2 text-center">Trước khi soạn</Text>
-                            <TouchableOpacity
-                                onPress={() => openImageSheet("preEvd")}
-                                className="h-40 w-full rounded-2xl bg-gray-100 items-center justify-center border border-dashed border-gray-300 overflow-hidden"
-                            >
+                            <View className="h-40 w-full rounded-2xl bg-gray-100 items-center justify-center border border-dashed border-gray-300 overflow-hidden">
                                 {preEvd ? (
                                     <>
                                         <Image source={{ uri: preEvd }} className="w-full h-full" resizeMode="cover" />
-                                        <View className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full">
+                                        <TouchableOpacity
+                                            onPress={() => handleViewImage(preEvd)}
+                                            className="absolute top-2 right-2 bg-black/60 p-2 rounded-full"
+                                        >
+                                            <Eye color="white" size={16} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => openImageSheet("preEvd")}
+                                            className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full"
+                                        >
                                             <Camera color="white" size={16} />
-                                        </View>
+                                        </TouchableOpacity>
                                     </>
                                 ) : (
-                                    <>
+                                    <TouchableOpacity
+                                        onPress={() => openImageSheet("preEvd")}
+                                        className="w-full h-full items-center justify-center"
+                                    >
                                         <UploadCloud color="#9ca3af" size={32} />
                                         <Text className="text-gray-500 font-medium mt-2">Tải ảnh lên</Text>
-                                    </>
+                                    </TouchableOpacity>
                                 )}
-                            </TouchableOpacity>
+                            </View>
                         </View>
 
                         {/* Post Evd */}
                         <View className="flex-1">
                             <Text className="text-sm text-gray-500 font-medium mb-2 text-center">Sau khi soạn</Text>
-                            <TouchableOpacity
-                                onPress={() => openImageSheet("postEvd")}
-                                className="h-40 w-full rounded-2xl bg-gray-100 items-center justify-center border border-dashed border-gray-300 overflow-hidden"
-                            >
+                            <View className="h-40 w-full rounded-2xl bg-gray-100 items-center justify-center border border-dashed border-gray-300 overflow-hidden">
                                 {postEvd ? (
                                     <>
                                         <Image source={{ uri: postEvd }} className="w-full h-full" resizeMode="cover" />
-                                        <View className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full">
+                                        <TouchableOpacity
+                                            onPress={() => handleViewImage(postEvd)}
+                                            className="absolute top-2 right-2 bg-black/60 p-2 rounded-full"
+                                        >
+                                            <Eye color="white" size={16} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => openImageSheet("postEvd")}
+                                            className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full"
+                                        >
                                             <Camera color="white" size={16} />
-                                        </View>
+                                        </TouchableOpacity>
                                     </>
                                 ) : (
-                                    <>
+                                    <TouchableOpacity
+                                        onPress={() => openImageSheet("postEvd")}
+                                        className="w-full h-full items-center justify-center"
+                                    >
                                         <UploadCloud color="#9ca3af" size={32} />
                                         <Text className="text-gray-500 font-medium mt-2">Tải ảnh lên</Text>
-                                    </>
+                                    </TouchableOpacity>
                                 )}
-                            </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
 
@@ -241,6 +279,12 @@ export default function UpdateTaskItemScreen() {
                 onTakePhoto={takePhoto}
             />
 
+            <ImageViewing
+                images={viewerImages}
+                imageIndex={0}
+                visible={viewerVisible}
+                onRequestClose={() => setViewerVisible(false)}
+            />
         </SafeAreaView>
     );
 }

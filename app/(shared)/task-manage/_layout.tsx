@@ -20,6 +20,19 @@ export default function TaskManageLayout() {
                 name="[id]/update-item"
                 options={{ title: "Cập nhật sản phẩm" }}
             />
+            <Stack.Screen
+                name="add-task"
+                options={{
+                    title: "Chọn đơn hàng",
+                }}
+            />
+            <Stack.Screen
+                name="add-task-form"
+                options={{
+                    title: "Tạo nhiệm vụ",
+                }}
+            />
         </Stack>
     );
 }
+

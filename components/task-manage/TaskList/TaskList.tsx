@@ -10,6 +10,7 @@ interface TaskListProps {
     onRefresh: () => void;
     onLoadMore?: () => void;
     onTaskPress: (task: any) => void;
+    onScroll?: (event: any) => void;
 }
 
 export default function TaskList({
@@ -19,7 +20,8 @@ export default function TaskList({
     isFetchingMore,
     onRefresh,
     onLoadMore,
-    onTaskPress
+    onTaskPress,
+    onScroll,
 }: TaskListProps) {
     return (
         <FlatList
@@ -37,6 +39,8 @@ export default function TaskList({
             onRefresh={onRefresh}
             onEndReached={onLoadMore}
             onEndReachedThreshold={0.5}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             initialNumToRender={8}
             maxToRenderPerBatch={10}
             windowSize={5}

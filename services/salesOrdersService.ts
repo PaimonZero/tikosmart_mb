@@ -4,7 +4,7 @@ export interface SalesOrderParams {
   q?: string;
   customerId?: string;
   sellerId?: string;
-  status?: string;
+  status?: string | string[];
   adminLocked?: boolean | string;
   limit?: number;
   offset?: number;
@@ -34,7 +34,7 @@ export interface UpdateSalesOrderData {
   orderNo?: string;
   customerId?: string;
   sellerId?: string;
-  status?: string;
+  status?: string | string[];
   slaDeliveryAt?: string;
   address?: string;
   adminLocked?: boolean | string;

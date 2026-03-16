@@ -6,7 +6,7 @@ const STATUS_OPTIONS = [
     { label: 'Tất cả', value: '' },
     { label: 'Đã phân công', value: 'assigned' },
     { label: 'Đang lấy hàng', value: 'in_progress' },
-    { label: 'Chờ kiểm tra', value: 'pending_review' },
+    { label: 'Chờ duyệt', value: 'pending_review' },
     { label: 'Hoàn thành', value: 'completed' },
     { label: 'Đã huỷ', value: 'cancelled' },
 ];

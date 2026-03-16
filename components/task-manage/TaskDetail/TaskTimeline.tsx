@@ -1,6 +1,7 @@
-import { CheckCircle2, CircleDashed } from "lucide-react-native";
-import React from "react";
-import { Text, View } from "react-native";
+import { CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, Clock } from "lucide-react-native";
+import React, { useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 export interface TaskTimelineProps {
     taskDetail: any;
@@ -8,15 +9,21 @@ export interface TaskTimelineProps {
 }
 
 export default function TaskTimeline({ taskDetail, isCancelled }: TaskTimelineProps) {
+    const scrollX = useSharedValue(0);
+    const [contentWidth, setContentWidth] = useState(0);
+    const [containerWidth, setContainerWidth] = useState(0);
+
     if (!taskDetail) return null;
 
     if (isCancelled) {
         return (
-            <View className="bg-red-50 p-4 rounded-xl border border-red-100 flex-row items-center mt-2 mx-4">
-                <CheckCircle2 color="#ef4444" size={24} />
-                <View className="ml-3">
-                    <Text className="text-red-700 font-bold text-base">Nhiệm vụ đã bị hủy</Text>
-                    <Text className="text-red-600 text-sm mt-0.5">Tiến trình đã dừng lại.</Text>
+            <View className="bg-red-50 p-5 rounded-2xl border border-red-100 flex-row items-center mt-2 mx-4 shadow-sm">
+                <View className="w-12 h-12 rounded-full bg-red-100 items-center justify-center mr-4">
+                    <CheckCircle2 color="#ef4444" size={24} />
+                </View>
+                <View className="flex-1">
+                    <Text className="text-red-800 font-extrabold text-base">Nhiệm vụ đã bị hủy</Text>
+                    <Text className="text-red-600/80 text-sm mt-1 font-medium">Tiến trình đã được dừng lại bởi hệ thống.</Text>
                 </View>
             </View>
         );
@@ -24,57 +31,129 @@ export default function TaskTimeline({ taskDetail, isCancelled }: TaskTimelinePr
 
     const steps = [
         { key: "assigned", label: "Đã phân công", time: taskDetail.createdAt },
-        { key: "in_progress", label: "Đang thực hiện", time: taskDetail.startedAt },
-        { key: "pending_review", label: "Chờ duyệt", time: null }, // Mốc này thường không có field time riêng rẽ mà dùng updated_at của review
-        { key: "completed", label: "Hoàn thành", time: taskDetail.completedAt },
+        { key: "in_progress", label: "Đang làm", time: taskDetail.startedAt },
+        { key: "pending_review", label: "Chờ duyệt", time: null },
+        { key: "completed", label: "Hoàn tất", time: taskDetail.completedAt },
     ];
 
     const currentStatusIndex = steps.findIndex((s) => s.key === taskDetail.status);
-    const flowIndex = currentStatusIndex === -1 ? 0 : currentStatusIndex; // Fallback if status not in list
+    const flowIndex = currentStatusIndex === -1 ? 0 : currentStatusIndex;
+
+    const leftIndicatorStyle = useAnimatedStyle(() => {
+        const isVisible = scrollX.value > 10;
+        return {
+            opacity: withTiming(isVisible ? 1 : 0),
+        };
+    });
+
+    const rightIndicatorStyle = useAnimatedStyle(() => {
+        const isVisible = scrollX.value < contentWidth - containerWidth - 10;
+        return {
+            opacity: withTiming(isVisible ? 1 : 0),
+        };
+    });
 
     return (
-        <View className="bg-white p-4 rounded-xl border border-gray-100 mx-4 mt-4 shadow-sm">
-            <Text className="text-lg font-bold text-gray-900 mb-5">Tiến trình nhiệm vụ</Text>
+        <View className="bg-white py-2 mt-2 border-y border-gray-100 shadow-sm relative">
+            <View className="flex-row items-center px-5 mb-6">
+                <View className="w-8 h-8 rounded-lg bg-blue-50 items-center justify-center mr-2.5">
+                    <Clock size={16} color="#3b82f6" />
+                </View>
+                <Text className="text-lg font-black text-gray-900 tracking-tight">Tiến trình</Text>
+            </View>
 
-            <View className="ml-2">
-                {steps.map((step, index) => {
-                    // Logic to determine if this step is reached or passed
-                    const isDone = index < flowIndex || (step.key === "completed" && taskDetail.status === "completed");
-                    const isCurrent = index === flowIndex;
-                    const isLast = index === steps.length - 1;
+            <View className="relative">
+                {/* Left Indicator Overlay gray */}
+                <Animated.View 
+                    style={leftIndicatorStyle}
+                    pointerEvents="none"
+                    className="absolute left-0 top-0 bottom-0 w-10 z-20 flex-row items-center pl-1"
+                >
+                    <View className="absolute inset-0 bg-gray-200/80 rounded-r-xl" />
+                    <ChevronLeft size={20} color="#3b82f6" />
+                </Animated.View>
 
-                    return (
-                        <View key={step.key} className="flex-row">
-                            {/* Visual Timeline Line & Dot */}
-                            <View className="items-center mr-4">
-                                {isDone || isCurrent ? (
-                                    <CheckCircle2 color={isCurrent ? "#3b82f6" : "#22c55e"} size={22} />
-                                ) : (
-                                    <CircleDashed color="#d1d5db" size={22} />
-                                )}
+                {/* Right Indicator Overlay */}
+                <Animated.View 
+                    style={rightIndicatorStyle}
+                    pointerEvents="none"
+                    className="absolute right-0 top-0 bottom-0 w-10 z-20 flex-row items-center justify-end pr-1"
+                >
+                    <View className="absolute inset-0 bg-gray-200/80 rounded-l-xl" />
+                    <ChevronRight size={20} color="#3b82f6" />
+                </Animated.View>
 
-                                {/* The connecting line (skip for last item) */}
-                                {!isLast && (
-                                    <View
-                                        className={`w-0.5 h-12 my-1.5 rounded-full ${isDone ? "bg-green-500" : "bg-gray-200"}`}
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    // contentContainerStyle={{ paddingHorizontal: 20 }}
+                    onScroll={(event) => {
+                        scrollX.value = event.nativeEvent.contentOffset.x;
+                    }}
+                    onLayout={(event) => {
+                        setContainerWidth(event.nativeEvent.layout.width);
+                    }}
+                    onContentSizeChange={(w) => {
+                        setContentWidth(w);
+                    }}
+                    scrollEventThrottle={16}
+                >
+                    {steps.map((step, index) => {
+                        const isDone = index < flowIndex || (step.key === "completed" && taskDetail.status === "completed");
+                        const isCurrent = index === flowIndex;
+                        const isLast = index === steps.length - 1;
+                        const isPassed = index < flowIndex;
+
+                        return (
+                            <View key={step.key} className="items-center" style={{ width: 130 }}>
+                                {/* Line & Dot Container */}
+                                <View className="flex-row items-center w-full mb-3">
+                                    {/* Left Line */}
+                                    <View 
+                                        className={`flex-1 h-[3px] rounded-full ${index === 0 ? 'bg-transparent' : (isDone ? 'bg-green-500' : 'bg-gray-100')}`} 
                                     />
-                                )}
-                            </View>
+                                    
+                                    {/* Dot Icon */}
+                                    <View className={`z-10 w-9 h-9 rounded-full items-center justify-center border-4 ${
+                                        isCurrent ? 'bg-blue-600 border-blue-100' : 
+                                        isDone ? 'bg-green-500 border-green-50' : 
+                                        'bg-white border-gray-100'
+                                    }`}>
+                                        {isDone || isCurrent ? (
+                                            <CheckCircle2 color="white" size={18} strokeWidth={3} />
+                                        ) : (
+                                            <CircleDashed color="#d1d5db" size={18} />
+                                        )}
+                                    </View>
 
-                            {/* Content */}
-                            <View className={`flex-1 pt-0.5 ${!isLast ? "pb-8" : ""}`}>
-                                <Text className={`text-base font-bold ${isCurrent ? "text-blue-600" : isDone ? "text-gray-900" : "text-gray-400"}`}>
-                                    {step.label}
-                                </Text>
-                                {step.time && (
-                                    <Text className="text-sm text-gray-500 mt-1.5 font-medium">
-                                        {new Date(step.time).toLocaleString("vi-VN")}
+                                    {/* Right Line */}
+                                    <View 
+                                        className={`flex-1 h-[3px] rounded-full ${isLast ? 'bg-transparent' : (isPassed ? 'bg-green-500' : 'bg-gray-100')}`} 
+                                    />
+                                </View>
+
+                                {/* Text labels */}
+                                <View className="items-center px-1">
+                                    <Text className={`text-xs text-center font-black uppercase tracking-tighter mb-1 ${
+                                        isCurrent ? 'text-blue-600' : isDone ? 'text-gray-900' : 'text-gray-400'
+                                    }`}>
+                                        {step.label}
                                     </Text>
-                                )}
+                                    <Text className={`text-[10px] text-center font-bold ${
+                                        isCurrent ? 'text-blue-500/70' : 'text-gray-400'
+                                    }`}>
+                                        {step.time ? new Date(step.time).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : "--:--"}
+                                    </Text>
+                                    {step.time && (
+                                        <Text className="text-[9px] text-gray-300 font-medium mt-0.5">
+                                            {new Date(step.time).toLocaleDateString("vi-VN")}
+                                        </Text>
+                                    )}
+                                </View>
                             </View>
-                        </View>
-                    );
-                })}
+                        );
+                    })}
+                </ScrollView>
             </View>
         </View>
     );

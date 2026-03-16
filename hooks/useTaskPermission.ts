@@ -5,6 +5,8 @@ import { Alert } from "react-native";
 
 const TASK_PERMISSIONS = {
   view: ["admin", "manager", "picker", "sup_picker", "accountant"],
+  add: ["admin", "sup_picker"],
+  cancel: ["admin", "manager", "sup_picker", "sup_shipper"],
 } as const;
 
 export const useTaskPermission = () => {
@@ -13,6 +15,8 @@ export const useTaskPermission = () => {
   const userRole = user?.role || "";
 
   const canView = TASK_PERMISSIONS.view.includes(userRole as any);
+  const canAdd = TASK_PERMISSIONS.add.includes(userRole as any);
+  const canCancelTask = TASK_PERMISSIONS.cancel.includes(userRole as any);
 
   const navigateToDetail = (taskId: string | number) => {
     if (canView) {
@@ -22,15 +26,28 @@ export const useTaskPermission = () => {
     }
   };
 
+  const navigateToAdd = () => {
+    if (canAdd) {
+      router.push("/(shared)/task-manage/add-task" as any);
+    } else {
+      Alert.alert("Thông báo", "Bạn không có quyền tạo nhiệm vụ");
+    }
+  };
+
   return {
     canView,
+    canAdd,
+    canCancelTask,
     userRole,
     user,
     navigateToDetail,
+    navigateToAdd,
   };
 };
 
-export const useTaskRouteGuard = (requiredPermission: "view" = "view") => {
+export const useTaskRouteGuard = (
+  requiredPermission: "view" | "add" = "view",
+) => {
   const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
   const userRole = user?.role || "";
@@ -49,7 +66,6 @@ export const useTaskRouteGuard = (requiredPermission: "view" = "view") => {
             text: "OK",
             onPress: () => {
               if (userRole) {
-                // Return to user's main dashboard
                 const roleRoutes: Record<string, string> = {
                   admin: "/(admin)/dashboard",
                   manager: "/(manager)/dashboard",

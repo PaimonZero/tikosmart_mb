@@ -29,28 +29,28 @@ export default function ProductItemHeader({
     return (
         <>
             {/* Hình ảnh + Tên + SKU + ĐVT */}
-            <View className="flex-row items-start mb-3">
-                <View className="w-16 h-16 rounded-lg bg-gray-50 items-center justify-center mr-3 border border-gray-100 overflow-hidden">
+            <View className="flex-row items-start mb-5">
+                <View className="w-20 h-20 rounded-2xl bg-gray-50 items-center justify-center mr-4 border border-gray-100 overflow-hidden">
                     {imgUrl ? (
                         <Image source={{ uri: imgUrl }} className="w-full h-full" resizeMode="cover" />
                     ) : (
-                        <PackageOpen color="#9ca3af" size={24} />
+                        <PackageOpen color="#9ca3af" size={28} />
                     )}
                 </View>
 
-                <View className="flex-1">
-                    <Text className="font-bold text-lg text-gray-900 leading-6">
+                <View className="flex-1 min-h-[80px] justify-center">
+                    <Text className="font-extrabold text-lg text-gray-900 leading-6 mb-2">
                         {productName || "Sản phẩm không xác định"}
                     </Text>
-                    <View className="flex-row items-center mt-2 flex-wrap">
-                        <View className="bg-blue-50 px-2 py-1.5 rounded mr-2 mb-1">
-                            <Text className="text-blue-700 font-bold text-sm">
+                    <View className="flex-row items-center flex-wrap">
+                        <View className="bg-blue-50 px-2.5 py-1 rounded-lg mr-2 mb-1 border border-blue-100">
+                            <Text className="text-blue-700 font-bold text-xs uppercase tracking-tight">
                                 {skuCode || "Chưa có SKU"}
                             </Text>
                         </View>
                         {!!displayUnit && (
-                            <View className="bg-gray-100 px-2 py-1.5 rounded mb-1 border border-gray-200">
-                                <Text className="text-gray-700 font-bold text-sm">
+                            <View className="bg-gray-100 px-2.5 py-1 rounded-lg mb-1 border border-gray-200">
+                                <Text className="text-gray-700 font-bold text-xs uppercase tracking-tight">
                                     ĐVT: {displayUnit}
                                 </Text>
                             </View>
@@ -60,16 +60,16 @@ export default function ProductItemHeader({
             </View>
 
             {/* Số lượng Cần lấy / Thực tế */}
-            <View className="flex-row bg-slate-50 rounded-lg border border-slate-100 p-4 mb-4">
-                <View className="flex-1 items-center border-r border-slate-200">
-                    <Text className="text-sm font-semibold text-gray-500 mb-1.5">Cần lấy</Text>
-                    <Text className="text-xl font-bold text-gray-900">
+            <View className="flex-row bg-gray-50/50 rounded-2xl border border-gray-100/50 p-4 mb-4">
+                <View className="flex-1 items-center border-r border-gray-200/50">
+                    <Text className="text-sm text-gray-400 mb-1.5 font-bold">Cần lấy</Text>
+                    <Text className="text-xl font-black text-gray-900">
                         {preQty?.toLocaleString("vi-VN") || 0}
                     </Text>
                 </View>
                 <View className="flex-1 items-center">
-                    <Text className="text-sm font-semibold text-gray-500 mb-1.5">Thực tế</Text>
-                    <Text className={`text-xl font-bold ${qtyColor}`}>
+                    <Text className="text-sm text-gray-400 mb-1.5 font-bold">Thực tế </Text>
+                    <Text className={`text-xl font-black ${qtyColor}`}>
                         {postQty?.toLocaleString("vi-VN") || 0}
                     </Text>
                 </View>

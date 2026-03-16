@@ -1,8 +1,7 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, CheckCircle, PlayCircle, Send, XCircle } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
     Alert,
     ScrollView,
     Text,
@@ -15,10 +14,13 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchInventoryLotById } from "@/store/inventoryLotSlice";
 import { fetchProductById } from "@/store/productSlice";
 import { fetchSalesOrderById } from "@/store/salesOrdersSlice";
-import { fetchTaskById, updateTaskStatus } from "@/store/taskSlice";
+import { fetchTaskById } from "@/store/taskSlice";
+import { taskSignal } from "@/services/taskSignal";
 // Make sure this hook exists per phase 1 plan
 import { useTaskPermission } from "@/hooks/useTaskPermission";
 
+import TaskActionFooter from "@/components/task-manage/TaskDetail/TaskActionFooter";
+import TaskDetailSkeleton from "@/components/task-manage/TaskDetail/TaskDetailSkeleton";
 import TaskInfoCards from "@/components/task-manage/TaskDetail/TaskInfoCards";
 import TaskProductList from "@/components/task-manage/TaskDetail/TaskProductList";
 import TaskTimeline from "@/components/task-manage/TaskDetail/TaskTimeline";
@@ -31,8 +33,10 @@ export default function TaskDetailScreen() {
     const { user } = useAppSelector((state) => state.auth);
     const userRole = user?.role || "";
 
+    const isFirstRun = useRef(true);
+
     // Access control hook
-    const { canView } = useTaskPermission();
+    const { canView, canCancelTask } = useTaskPermission();
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -100,47 +104,24 @@ export default function TaskDetailScreen() {
         }
     };
 
-    useEffect(() => {
-        if (canView) {
-            loadData();
-        }
-    }, [taskIdParam, canView]);
-
-
-    // Action Handlers
-    const handleUpdateStatus = async (newStatus: string, confirmationMessage: string) => {
-        Alert.alert("Xác nhận", confirmationMessage, [
-            { text: "Hủy", style: "cancel" },
-            {
-                text: "Đồng ý",
-                onPress: async () => {
-                    if (!taskDetail?.id) return;
-                    setUpdating(true);
-                    try {
-                        await dispatch(updateTaskStatus({ id: taskDetail.id, status: newStatus })).unwrap();
-                        Alert.alert("Thành công", "Đã cập nhật trạng thái nhiệm vụ.");
-                        loadData(); // Reload
-                    } catch (err: any) {
-                        Alert.alert("Lỗi", err?.message || "Không thể thay đổi trạng thái.");
-                    } finally {
-                        setUpdating(false);
-                    }
+    useFocusEffect(
+        useCallback(() => {
+            if (canView) {
+                if (isFirstRun.current || taskSignal.shouldRefresh) {
+                    loadData();
+                    isFirstRun.current = false;
+                    taskSignal.shouldRefresh = false;
                 }
             }
-        ]);
-    };
+        }, [taskIdParam, canView])
+    );
 
     const isCancelled = taskDetail?.status === "cancelled" || orderDetail?.status === "cancelled";
 
     if (!canView) return null;
 
     if (loading) {
-        return (
-            <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text className="mt-4 text-gray-500">Đang tải chi tiết...</Text>
-            </SafeAreaView>
-        );
+        return <TaskDetailSkeleton />;
     }
 
     if (!taskDetail && !loading) {
@@ -159,63 +140,6 @@ export default function TaskDetailScreen() {
         );
     }
 
-    // Render Sticky Bottom Bar (Sticky Actions)
-    const renderStickyActions = () => {
-        if (isCancelled || updating) return null;
-
-        if (userRole === "picker" && taskDetail?.status === "assigned") {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg">
-                    <TouchableOpacity
-                        onPress={() => handleUpdateStatus("in_progress", "Bắt đầu thực hiện nhiệm vụ soạn hàng này?")}
-                        className="bg-blue-600 rounded-xl flex-row items-center justify-center py-3.5"
-                    >
-                        <PlayCircle color="white" size={20} />
-                        <Text className="text-white font-bold text-base ml-2">Bắt đầu làm</Text>
-                    </TouchableOpacity>
-                </View>
-            );
-        }
-
-        if (userRole === "picker" && taskDetail?.status === "in_progress") {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg">
-                    <TouchableOpacity
-                        onPress={() => handleUpdateStatus("pending_review", "Xác nhận gửi yêu cầu duyệt nhiệm vụ này?")}
-                        className="bg-amber-500 rounded-xl flex-row items-center justify-center py-3.5"
-                    >
-                        <Send color="white" size={20} />
-                        <Text className="text-white font-bold text-base ml-2">Gửi Yêu Cầu Duyệt</Text>
-                    </TouchableOpacity>
-                </View>
-            );
-        }
-
-        // Supervisor review logic will go here (Duyệt/Từ chối buttons)
-        if (userRole !== "picker" && taskDetail?.status === "pending_review") {
-            return (
-                <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-8 shadow-lg flex-row space-x-3">
-                    <TouchableOpacity
-                        className="flex-1 bg-green-600 rounded-xl flex-row items-center justify-center py-3.5"
-                    // onPress={() => router.push(`/(shared)/task-manage/review-modal`)} 
-                    /* Or open a Review Actions bottom sheet modal directly here */
-                    >
-                        <CheckCircle color="white" size={20} />
-                        <Text className="text-white font-bold text-base ml-2">Duyệt</Text>
-                    </TouchableOpacity>
-                    <View className="w-4" />
-                    <TouchableOpacity
-                        className="flex-1 bg-red-500 rounded-xl flex-row items-center justify-center py-3.5"
-                    >
-                        <XCircle color="white" size={20} />
-                        <Text className="text-white font-bold text-base ml-2">Từ chối</Text>
-                    </TouchableOpacity>
-                </View>
-            );
-        }
-
-        return null;
-    };
     return (
         <SafeAreaView className="flex-1 bg-gray-50" edges={["top", "bottom"]}>
             {/* Custom Header */}
@@ -254,12 +178,19 @@ export default function TaskDetailScreen() {
                 />
 
                 {/* Padding bottom so content isn't hidden behind sticky action bar */}
-                <View className="h-28" />
+                <View className="h-44" />
             </ScrollView>
 
             {/* Sticky Actions Footer */}
-            {renderStickyActions()}
-
+            <TaskActionFooter
+                taskDetail={taskDetail}
+                orderDetail={orderDetail}
+                userRole={userRole}
+                canCancelTask={canCancelTask}
+                updating={updating}
+                setUpdating={setUpdating}
+                onSuccess={loadData}
+            />
         </SafeAreaView>
     );
 }

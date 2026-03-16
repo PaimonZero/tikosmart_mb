@@ -34,9 +34,9 @@ export default function TaskProductList({
     }
 
     return (
-        <View className="mx-4 mt-4">
+        <View className="mt-4">
             {/* Section Header */}
-            <View className="flex-row items-center mb-2 px-1">
+            <View className="flex-row items-center mb-2 px-1 mx-4">
                 <Text className="text-lg font-bold text-gray-900">Danh sách sản phẩm</Text>
                 <View className="bg-blue-100 rounded-full px-2 py-0.5 ml-2">
                     <Text className="text-blue-700 text-sm font-bold">{taskItems.length}</Text>
@@ -50,7 +50,7 @@ export default function TaskProductList({
                 const displayUnit = productInfo?.mainUnit || lot?.mainUnit || item.unit || "";
 
                 return (
-                    <View key={item.id} className="bg-white p-4 mb-3 rounded-xl border border-gray-100 shadow-sm">
+                    <View key={item.id} className="bg-white p-4 mb-3 border border-gray-100 shadow-sm">
 
                         <ProductItemHeader
                             productName={item.productName || productInfo?.name || ""}
