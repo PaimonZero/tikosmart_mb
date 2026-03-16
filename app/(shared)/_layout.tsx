@@ -20,6 +20,12 @@ export default function SharedLayout() {
                     title: 'Đơn hàng bán',
                 }}
             />
+            <Stack.Screen
+                name="task-manage"
+                options={{
+                    title: 'Quản lý soạn hàng',
+                }}
+            />
         </Stack>
     );
 }

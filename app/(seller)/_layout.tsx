@@ -36,7 +36,7 @@ export default function SellerTabLayout() {
             <Tabs.Screen
                 name="products"
                 options={{
-                    title: "Danh sách sản phẩm",
+                    title: "Sản phẩm",
                     tabBarIcon: ({ color }) => (
                         <Feather name="package" size={24} color={color} />
                     ),

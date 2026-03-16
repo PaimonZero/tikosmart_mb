@@ -6,6 +6,7 @@ import CustomHomeHeader from "@/components/homepage/CustomHomeHeader";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppSelector } from "@/store/hooks";
 import { Feather } from "@expo/vector-icons";
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function PickerTabLayout() {
     const { isAuthenticated, hasHydrated } = useAppSelector((s) => s.auth);
@@ -36,9 +37,19 @@ export default function PickerTabLayout() {
             <Tabs.Screen
                 name="products"
                 options={{
-                    title: "Danh sách sản phẩm",
+                    title: "Sản phẩm",
                     tabBarIcon: ({ color }) => (
                         <Feather name="package" size={24} color={color} />
+                    ),
+                    headerShown: false,
+                }}
+            />
+            <Tabs.Screen
+                name="taskManage"
+                options={{
+                    title: "Soạn hàng",
+                    tabBarIcon: ({ color }) => (
+                        <MaterialCommunityIcons name="package-variant" size={24} color={color} />
                     ),
                     headerShown: false,
                 }}
