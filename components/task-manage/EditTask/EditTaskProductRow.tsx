@@ -7,7 +7,6 @@ import ImageView from "react-native-image-viewing";
 import { toast } from "sonner-native";
 
 export interface EditTaskItemRow {
-// ... (rest of interface unchanged)
   key: string;
   itemId: string;
   orderItemId: string;
@@ -95,7 +94,7 @@ export default function EditTaskProductRow({
   return (
     <View className="bg-white mb-2 mx-2 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <View className="px-4 pt-4 pb-3 flex-row items-center border-b border-gray-100/50">
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => item.image && setViewerVisible(true)}
           className="w-14 h-14 rounded-xl bg-gray-50 items-center justify-center mr-3 border border-gray-100 overflow-hidden"
@@ -114,9 +113,8 @@ export default function EditTaskProductRow({
             <Text className="text-xs text-blue-600 font-medium">{item.sku || "N/A"}</Text>
           </View>
         </View>
-        <View className="bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 ml-2">
-          <Text className="text-[10px] uppercase font-bold text-blue-400 mb-0.5">Còn</Text>
-          <Text className="text-sm font-black text-blue-700 text-center">{item.remain}</Text>
+        <View className="bg-blue-100 px-2.5 py-1 rounded-full ml-3 mt-1 self-start">
+          <Text className="text-sm font-bold text-blue-600">Còn {item.remain}</Text>
         </View>
       </View>
 
