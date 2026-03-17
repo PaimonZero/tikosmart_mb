@@ -137,7 +137,7 @@ export default function TaskManageScreen() {
                 />
 
                 {/* Task List */}
-                {isLoading && !isRefreshing && listData.length === 0 ? (
+                {isLoading && !isRefreshing ? (
                     <TaskListSkeleton count={5} />
                 ) : (
                     <TaskList
