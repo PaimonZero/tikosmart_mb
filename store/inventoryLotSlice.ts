@@ -246,7 +246,7 @@ const inventoryLotSlice = createSlice({
       }
 
       // Prevent duplicate processing
-      const exists = list.some((lot) => lot.id === newLot.id);
+      const exists = list.some((lot: any) => lot.id === newLot.id);
       if (exists) return;
 
       if (Array.isArray(state.inventoryLots)) {
