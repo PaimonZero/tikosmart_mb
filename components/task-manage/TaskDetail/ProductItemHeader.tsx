@@ -21,6 +21,8 @@ export default function ProductItemHeader({
     postQty,
 }: ProductItemHeaderProps) {
     const [viewerVisible, setViewerVisible] = useState(false);
+    const imageUri = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+
 
     const qtyColor =
         postQty === preQty
@@ -35,11 +37,11 @@ export default function ProductItemHeader({
             <View className="flex-row items-start mb-5">
                 <TouchableOpacity
                     activeOpacity={0.8}
-                    onPress={() => imgUrl && setViewerVisible(true)}
+                    onPress={() => imageUri && setViewerVisible(true)}
                     className="w-20 h-20 rounded-2xl bg-gray-50 items-center justify-center mr-4 border border-gray-100 overflow-hidden"
                 >
-                    {imgUrl ? (
-                        <Image source={{ uri: imgUrl }} className="w-full h-full" resizeMode="cover" />
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} className="w-full h-full" resizeMode="cover" />
                     ) : (
                         <PackageOpen color="#9ca3af" size={28} />
                     )}
@@ -82,9 +84,9 @@ export default function ProductItemHeader({
                 </View>
             </View>
 
-            {imgUrl && (
+            {imageUri && (
                 <ImageView
-                    images={[{ uri: imgUrl }]}
+                    images={[{ uri: imageUri }]}
                     imageIndex={0}
                     visible={viewerVisible}
                     onRequestClose={() => setViewerVisible(false)}
