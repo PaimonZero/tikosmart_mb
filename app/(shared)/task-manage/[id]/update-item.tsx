@@ -1,15 +1,16 @@
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Camera, Eye, Save, UploadCloud } from "lucide-react-native";
+import { ArrowLeft, Camera, Eye, Save, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import ImageViewing from "react-native-image-viewing";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import ImageSourceModal from "@/components/task-manage/TaskDetail/ImageSourceModal";
+// import ImageSourceModal from "@/components/task-manage/TaskDetail/ImageSourceModal";
 import { useTaskPermission } from "@/hooks/useTaskPermission";
-import { uploadImage } from "@/services/uploadImageService";
 import { taskSignal } from "@/services/taskSignal";
+import { uploadWatermarkedImages } from "@/services/uploadImageService";
 import { useAppDispatch } from "@/store/hooks";
 import { updateTaskItemByPicker } from "@/store/taskSlice";
 import { toast } from "sonner-native";
@@ -23,14 +24,65 @@ export default function UpdateTaskItemScreen() {
     const { canView } = useTaskPermission();
 
     const [postQty, setPostQty] = useState(postQtyParam ? String(postQtyParam) : "0");
-    const [preEvd, setPreEvd] = useState<string | null>(preEvdParam ? String(preEvdParam) : null);
-    const [postEvd, setPostEvd] = useState<string | null>(postEvdParam ? String(postEvdParam) : null);
+
+    const parseEvdParam = (param: any): { uri: string, meta: any }[] => {
+        if (!param) return [];
+        let uris: string[] = [];
+        if (typeof param === 'string') {
+            if (param.startsWith('[') && param.endsWith(']')) {
+                try { uris = JSON.parse(param); } catch { uris = [param]; }
+            } else if (param.includes(',')) {
+                uris = param.split(',').filter(Boolean);
+            } else {
+                uris = [param];
+            }
+        } else if (Array.isArray(param)) {
+            uris = param;
+        } else {
+            uris = [param];
+        }
+        return uris.map(u => ({ uri: u, meta: null }));
+    };
+
+    const [preEvd, setPreEvd] = useState<{ uri: string, meta: any }[]>(parseEvdParam(preEvdParam));
+    const [postEvd, setPostEvd] = useState<{ uri: string, meta: any }[]>(parseEvdParam(postEvdParam));
 
     const [isSaving, setIsSaving] = useState(false);
 
-    // Bottom Sheet Control
-    const [sheetVisible, setSheetVisible] = useState(false);
-    const [targetImageType, setTargetImageType] = useState<ImageType>(null);
+    const [currentMeta, setCurrentMeta] = useState({ capturedAt: "", latitude: "", longitude: "", accuracy: "", address: "" });
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
+                const meta = {
+                    capturedAt: new Date().toISOString(),
+                    latitude: "",
+                    longitude: "",
+                    accuracy: "",
+                    address: ""
+                };
+
+                if (locStatus === 'granted') {
+                    const location = await Location.getLastKnownPositionAsync();
+                    if (location) {
+                        meta.latitude = String(location.coords.latitude);
+                        meta.longitude = String(location.coords.longitude);
+                        meta.accuracy = String(location.coords.accuracy);
+
+                        const addressRes = await Location.reverseGeocodeAsync({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+                        if (addressRes && addressRes[0]) {
+                            const { streetNumber, street, district, city } = addressRes[0];
+                            meta.address = `${streetNumber ? streetNumber + " " : ""}${street || ""}, ${district || ""}, ${city || ""}`;
+                        }
+                    }
+                }
+                setCurrentMeta(meta);
+            } catch (err) {
+                console.warn("Location caching error:", err);
+            }
+        })();
+    }, []);
 
     // Image Viewer Control
     const [viewerVisible, setViewerVisible] = useState(false);
@@ -41,31 +93,7 @@ export default function UpdateTaskItemScreen() {
         setViewerVisible(true);
     };
 
-    // Initialize Local Settings
-    useEffect(() => {
-        // Here normally we might fetch fresh task data or just rely on passed params. 
-        // For production, fetching the single item from redux or passing it through Context is safer.
-        // For demo, we are relying on user input purely as state, then dispatching the thunk.
-    }, [itemId]);
-
-    const openImageSheet = (type: ImageType) => {
-        setTargetImageType(type);
-        setSheetVisible(true);
-    };
-
-    const processImageSelection = (result: ImagePicker.ImagePickerResult) => {
-        if (!result.canceled && result.assets && result.assets[0]) {
-            const asset = result.assets[0];
-
-            if (targetImageType === "preEvd") {
-                setPreEvd(asset.uri);
-            } else if (targetImageType === "postEvd") {
-                setPostEvd(asset.uri);
-            }
-        }
-    };
-
-    const takePhoto = async () => {
+    const takePhoto = async (type: "preEvd" | "postEvd") => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert("Lỗi", "Cần quyền truy cập máy ảnh để chụp ảnh.");
@@ -74,25 +102,27 @@ export default function UpdateTaskItemScreen() {
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ['images'],
-            quality: 0.7,
+            cameraType: ImagePicker.CameraType.back,
         });
 
-        processImageSelection(result);
+        if (!result.canceled && result.assets && result.assets[0]) {
+            const asset = result.assets[0];
+            const meta = { ...currentMeta, capturedAt: new Date().toISOString() };
+
+            if (type === "preEvd") {
+                setPreEvd(prev => [...prev, { uri: asset.uri, meta }]);
+            } else {
+                setPostEvd(prev => [...prev, { uri: asset.uri, meta }]);
+            }
+        }
     };
 
-    const pickFromLibrary = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert("Lỗi", "Cần quyền truy cập thư viện để chọn ảnh.");
-            return;
+    const removeImage = (type: "preEvd" | "postEvd", index: number) => {
+        if (type === "preEvd") {
+            setPreEvd(prev => prev.filter((_, i) => i !== index));
+        } else {
+            setPostEvd(prev => prev.filter((_, i) => i !== index));
         }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            quality: 0.7,
-        });
-
-        processImageSelection(result);
     };
 
     const handleSave = async () => {
@@ -100,31 +130,33 @@ export default function UpdateTaskItemScreen() {
         setIsSaving(true);
 
         try {
-            let finalPreEvdUrl = preEvd;
-            let finalPostEvdUrl = postEvd;
+            const uploadList = async (items: { uri: string, meta: any }[]) => {
+                const localItems = items.filter(
+                    (i) => i.uri.startsWith("file://") || i.uri.startsWith("content://")
+                );
+                const remoteUris = items
+                    .filter((i) => !i.uri.startsWith("file://") && !i.uri.startsWith("content://"))
+                    .map((i) => i.uri);
 
-            // Nếu URIs là hình ảnh local (thường bắt đầu bằng file://) cần upload lên trước
-            if (preEvd && preEvd.startsWith("file://")) {
-                const uploadRes = await uploadImage(preEvd);
-                finalPreEvdUrl = uploadRes.url || uploadRes.data?.url; 
-            }
+                if (localItems.length > 0) {
+                    const urisToUpload = localItems.map((i) => i.uri);
+                    const baseMeta = localItems[0].meta || {}; // Use first location as reference
+                    const uploadRes = await uploadWatermarkedImages(urisToUpload, baseMeta);
+                    if (uploadRes?.urls) {
+                        return [...remoteUris, ...uploadRes.urls];
+                    }
+                }
+                return [...remoteUris];
+            };
 
-            if (postEvd && postEvd.startsWith("file://")) {
-                const uploadRes = await uploadImage(postEvd);
-                finalPostEvdUrl = uploadRes.url || uploadRes.data?.url;
-            }
+            const finalPreEvdUris = await uploadList(preEvd);
+            const finalPostEvdUris = await uploadList(postEvd);
 
             const payload: any = {
                 postQty: Number(postQty),
+                preEvd: finalPreEvdUris,
+                postEvd: finalPostEvdUris,
             };
-
-            if (finalPreEvdUrl && !finalPreEvdUrl.startsWith("file://")) {
-                payload.preEvd = finalPreEvdUrl;
-            }
-
-            if (finalPostEvdUrl && !finalPostEvdUrl.startsWith("file://")) {
-                payload.postEvd = finalPostEvdUrl;
-            }
 
             await dispatch(updateTaskItemByPicker({
                 taskId: id as string,
@@ -133,11 +165,7 @@ export default function UpdateTaskItemScreen() {
             })).unwrap();
 
             toast.success("Thành công", { description: "Đã lưu cập nhật sản phẩm.", duration: 2000 });
-            
-            // Signal detail screen to refresh
             taskSignal.shouldRefresh = true;
-            
-            // Go back to the existing detail screen in the stack
             router.back();
 
         } catch (error: any) {
@@ -148,6 +176,34 @@ export default function UpdateTaskItemScreen() {
     };
 
     if (!canView) return null;
+
+    const renderImageList = (type: "preEvd" | "postEvd", items: { uri: string, meta: any }[]) => {
+        return (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2">
+                {items.map((item, idx) => (
+                    <View key={idx} className="h-40 w-40 rounded-2xl bg-gray-100 overflow-hidden mr-3">
+                        <TouchableOpacity onPress={() => handleViewImage(item.uri)} className="w-full h-full" activeOpacity={0.9}>
+                            <Image source={{ uri: item.uri }} className="w-full h-full" resizeMode="cover" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => removeImage(type, idx)}
+                            className="absolute top-1 right-1 bg-red-500 p-1.5 rounded-full"
+                        >
+                            <X color="white" size={20} />
+                        </TouchableOpacity>
+                    </View>
+                ))}
+                <TouchableOpacity
+                    onPress={() => takePhoto(type)}
+                    disabled={isSaving}
+                    className="h-40 w-40 rounded-2xl bg-gray-50 items-center justify-center border border-dashed border-gray-300"
+                >
+                    <Camera color="#6b7280" size={28} />
+                    <Text className="text-gray-500 font-medium mt-1 text-xs">Chụp ảnh</Text>
+                </TouchableOpacity>
+            </ScrollView>
+        );
+    };
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
@@ -186,72 +242,18 @@ export default function UpdateTaskItemScreen() {
                     </View>
 
                     {/* Evidences Section */}
-                    <Text className="text-base font-bold text-gray-900 mb-2 mt-2">Ảnh minh chứng</Text>
+                    <Text className="text-base font-bold text-gray-900 mb-4 mt-2">Ảnh minh chứng</Text>
 
-                    <View className="flex-row gap-2 mb-8">
-                        {/* Pre Evd */}
-                        <View className="flex-1">
-                            <Text className="text-sm text-gray-500 font-medium mb-2 text-center">Trước khi soạn</Text>
-                            <View className="h-40 w-full rounded-2xl bg-gray-100 items-center justify-center border border-dashed border-gray-300 overflow-hidden">
-                                {preEvd ? (
-                                    <>
-                                        <Image source={{ uri: preEvd }} className="w-full h-full" resizeMode="cover" />
-                                        <TouchableOpacity
-                                            onPress={() => handleViewImage(preEvd)}
-                                            className="absolute top-2 right-2 bg-black/60 p-2 rounded-full"
-                                        >
-                                            <Eye color="white" size={16} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => openImageSheet("preEvd")}
-                                            className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full"
-                                        >
-                                            <Camera color="white" size={16} />
-                                        </TouchableOpacity>
-                                    </>
-                                ) : (
-                                    <TouchableOpacity
-                                        onPress={() => openImageSheet("preEvd")}
-                                        className="w-full h-full items-center justify-center"
-                                    >
-                                        <UploadCloud color="#9ca3af" size={32} />
-                                        <Text className="text-gray-500 font-medium mt-2">Tải ảnh lên</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        </View>
+                    {/* Pre Evd */}
+                    <View className="mb-6">
+                        <Text className="text-sm text-gray-500 font-medium mb-2">Trước khi soạn</Text>
+                        {renderImageList("preEvd", preEvd)}
+                    </View>
 
-                        {/* Post Evd */}
-                        <View className="flex-1">
-                            <Text className="text-sm text-gray-500 font-medium mb-2 text-center">Sau khi soạn</Text>
-                            <View className="h-40 w-full rounded-2xl bg-gray-100 items-center justify-center border border-dashed border-gray-300 overflow-hidden">
-                                {postEvd ? (
-                                    <>
-                                        <Image source={{ uri: postEvd }} className="w-full h-full" resizeMode="cover" />
-                                        <TouchableOpacity
-                                            onPress={() => handleViewImage(postEvd)}
-                                            className="absolute top-2 right-2 bg-black/60 p-2 rounded-full"
-                                        >
-                                            <Eye color="white" size={16} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => openImageSheet("postEvd")}
-                                            className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full"
-                                        >
-                                            <Camera color="white" size={16} />
-                                        </TouchableOpacity>
-                                    </>
-                                ) : (
-                                    <TouchableOpacity
-                                        onPress={() => openImageSheet("postEvd")}
-                                        className="w-full h-full items-center justify-center"
-                                    >
-                                        <UploadCloud color="#9ca3af" size={32} />
-                                        <Text className="text-gray-500 font-medium mt-2">Tải ảnh lên</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        </View>
+                    {/* Post Evd */}
+                    <View className="mb-6">
+                        <Text className="text-sm text-gray-500 font-medium mb-2">Sau khi soạn</Text>
+                        {renderImageList("postEvd", postEvd)}
                     </View>
 
                 </ScrollView>
@@ -270,14 +272,6 @@ export default function UpdateTaskItemScreen() {
                     </Text>
                 </TouchableOpacity>
             </View>
-
-            {/* Bottom Sheet for Image Selection */}
-            <ImageSourceModal
-                visible={sheetVisible}
-                onClose={() => setSheetVisible(false)}
-                onPickFromLibrary={pickFromLibrary}
-                onTakePhoto={takePhoto}
-            />
 
             <ImageViewing
                 images={viewerImages}
