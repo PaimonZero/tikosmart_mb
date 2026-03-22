@@ -18,6 +18,7 @@ import "react-native-reanimated";
 import { Provider } from "react-redux";
 import { Toaster } from "sonner-native";
 import "./globals.css";
+import CustomSplash from "@/components/CustomSplash";
 import useUserStatusSocket from "@/hooks/useUserStatusSocket";
 import useNotificationSocket from "@/hooks/socket-events/useNotificationSocket";
 import useInventoryEvents from "@/hooks/socket-events/useInventoryEvents";
@@ -39,6 +40,7 @@ function RootLayoutInner() {
   const dispatch = useAppDispatch();
   const { isAuthenticated, hasFetchedProfile, hasHydrated, user, token } =
     useAppSelector((s) => s.auth);
+  const [isSplashAnimationDone, setSplashAnimationDone] = React.useState(false);
     
   // Realtime hooks
   useUserStatusSocket();
@@ -90,9 +92,18 @@ function RootLayoutInner() {
     return () => setAuthExpiredHandler(null);
   }, [dispatch, router]);
 
+  const isAppReady = hasHydrated && (!isAuthenticated || hasFetchedProfile);
+
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      {!isSplashAnimationDone && (
+        <CustomSplash 
+          isAppReady={isAppReady} 
+          onAnimationFinish={() => setSplashAnimationDone(true)} 
+        />
+      )}
       <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(seller)" options={{ headerShown: false }} />
