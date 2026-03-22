@@ -161,6 +161,7 @@ export default function ProductListScreen() {
                             bottom: 24,
                             right: 16,
                             backgroundColor: "#2563EB",
+                            zIndex: 10,
                         }}
                     />
                 )}

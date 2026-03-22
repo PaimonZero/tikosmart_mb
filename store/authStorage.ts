@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const KEYS = {
   user: 'currentUser',
@@ -31,10 +32,20 @@ const authStorage = {
       const remember = rememberRaw === 'true';
 
       if (remember) {
-        const [userRaw, token] = await Promise.all([
-          AsyncStorage.getItem(KEYS.user),
-          AsyncStorage.getItem(KEYS.token),
-        ]);
+        // Try reading token from SecureStore first (New way)
+        let token = await SecureStore.getItemAsync(KEYS.token);
+        
+        // Migration logic for existing users
+        if (!token) {
+          token = await AsyncStorage.getItem(KEYS.token);
+          if (token) {
+            // Migrate to SecureStore
+            await SecureStore.setItemAsync(KEYS.token, token);
+            await AsyncStorage.removeItem(KEYS.token); // Clean up
+          }
+        }
+
+        const userRaw = await AsyncStorage.getItem(KEYS.user);
 
         return {
           user: safeJsonParse(userRaw),
@@ -63,7 +74,7 @@ const authStorage = {
     if (remember) {
       await Promise.all([
         AsyncStorage.setItem(KEYS.user, JSON.stringify(user)),
-        AsyncStorage.setItem(KEYS.token, token),
+        SecureStore.setItemAsync(KEYS.token, token),
         AsyncStorage.setItem(KEYS.remember, 'true'),
       ]);
     } else {
@@ -83,7 +94,7 @@ const authStorage = {
 
   setTokenOnly: async (token: string, remember: boolean) => {
     if (remember) {
-      await AsyncStorage.setItem(KEYS.token, token);
+      await SecureStore.setItemAsync(KEYS.token, token);
     } else {
       sessionToken = token;
     }
@@ -94,7 +105,7 @@ const authStorage = {
     sessionToken = null;
     await Promise.all([
       AsyncStorage.removeItem(KEYS.user),
-      AsyncStorage.removeItem(KEYS.token),
+      SecureStore.deleteItemAsync(KEYS.token),
       AsyncStorage.removeItem(KEYS.remember),
     ]);
   },
