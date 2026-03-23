@@ -85,13 +85,6 @@ export const ProductListView: React.FC<ProductListViewProps> = ({
                 showsVerticalScrollIndicator={false}
             />
 
-            {/* Loading Overlay - Shows skeleton when loading with old data */}
-            {/* Loading Overlay - Shows skeleton only when initial loading and no products */}
-            {fetchStatus === 'loading' && products.length === 0 && (
-                <View className="absolute inset-0 bg-gray-50">
-                    <ProductCardSkeleton count={5} />
-                </View>
-            )}
         </View>
     );
 };

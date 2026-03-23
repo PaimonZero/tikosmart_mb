@@ -2,25 +2,25 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateOnlineCount, updateOnlineStatusBatch } from "@/store/userSlice";
 import { useEffect } from "react";
 import { AppState, AppStateStatus } from "react-native";
-import { io, Socket } from "socket.io-client";
-
-const SOCKET_URL =
-  process.env.EXPO_PUBLIC_API_SOCKET_URL ||
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
-  "";
+import { socket } from "@/utils/socketManager";
 
 function useUserStatusSocket() {
   const dispatch = useAppDispatch();
   const userId = useAppSelector((state) => state.auth.user?.id);
 
   useEffect(() => {
+    if (!userId) return;
 
-    const socket: Socket = io(SOCKET_URL, {
-      transports: ["websocket"],
-    });
+    // Khi socket đã connect, thông báo mình online
+    const handleConnect = () => {
+      socket.emit("user:online", userId);
+    };
 
-    // When user logs in or enters app
-    socket.emit("user:online", userId);
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    socket.on("connect", handleConnect);
 
     socket.on("users:status", (statusList: any[]) => {
       dispatch(updateOnlineStatusBatch(statusList));
@@ -35,17 +35,18 @@ function useUserStatusSocket() {
       "change",
       (nextAppState: AppStateStatus) => {
         if (nextAppState === "active") {
-          socket.connect();
+          if (!socket.connected) {
+            socket.connect();
+          }
           socket.emit("user:online", userId);
-        } else if (nextAppState.match(/inactive|background/)) {
-          // Optional: Disconnect on background if you want to show them as offline immediately
-          // socket.disconnect();
         }
       },
     );
 
     return () => {
-      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.off("users:status");
+      socket.off("user:onlineCount");
       subscription.remove();
     };
   }, [userId, dispatch]);

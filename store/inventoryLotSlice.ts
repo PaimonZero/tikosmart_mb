@@ -231,6 +231,142 @@ const inventoryLotSlice = createSlice({
       state.fetchDetailStatus = "idle";
       state.fetchDetailError = null;
     },
+    // Real-time: Add new inventory lot
+    addInventoryLot: (state, action) => {
+      const newLot = action.payload;
+      let list = [];
+
+      if (Array.isArray(state.inventoryLots)) {
+        list = state.inventoryLots;
+      } else if (
+        state.inventoryLots &&
+        Array.isArray((state.inventoryLots as any).data)
+      ) {
+        list = (state.inventoryLots as any).data;
+      }
+
+      // Prevent duplicate processing
+      const exists = list.some((lot: any) => lot.id === newLot.id);
+      if (exists) return;
+
+      if (Array.isArray(state.inventoryLots)) {
+        state.inventoryLots.unshift(newLot);
+      } else if (
+        state.inventoryLots &&
+        Array.isArray((state.inventoryLots as any).data)
+      ) {
+        (state.inventoryLots as any).data.unshift(newLot);
+        if ((state.inventoryLots as any).pagination) {
+          (state.inventoryLots as any).pagination.total =
+            ((state.inventoryLots as any).pagination.total || 0) + 1;
+        }
+      } else {
+        state.inventoryLots = [newLot];
+      }
+
+      // Update in inventoryLotsByProductId
+      if (
+        state.inventoryLotsByProductId &&
+        Array.isArray((state.inventoryLotsByProductId as any).data)
+      ) {
+        if (
+          (state.inventoryLotsByProductId as any).currentProductId ===
+          newLot.productId
+        ) {
+          (state.inventoryLotsByProductId as any).data.unshift(newLot);
+          if ((state.inventoryLotsByProductId as any).pagination) {
+            (state.inventoryLotsByProductId as any).pagination.total =
+              ((state.inventoryLotsByProductId as any).pagination.total || 0) +
+              1;
+          }
+        }
+      }
+    },
+    // Real-time: Update existing inventory lot
+    updateInventoryLotRealtime: (state, action) => {
+      const updatedLot = action.payload;
+      // Update in list
+      if (Array.isArray(state.inventoryLots)) {
+        const idx = state.inventoryLots.findIndex((l) => l.id === updatedLot.id);
+        if (idx !== -1) state.inventoryLots[idx] = updatedLot;
+      } else if (
+        state.inventoryLots &&
+        Array.isArray((state.inventoryLots as any).data)
+      ) {
+        const idx = (state.inventoryLots as any).data.findIndex(
+          (l: InventoryLot) => l.id === updatedLot.id,
+        );
+        if (idx !== -1) (state.inventoryLots as any).data[idx] = updatedLot;
+      }
+
+      // Update in inventoryLotsByProductId
+      if (
+        state.inventoryLotsByProductId &&
+        Array.isArray((state.inventoryLotsByProductId as any).data)
+      ) {
+        const idx = (state.inventoryLotsByProductId as any).data.findIndex(
+          (l: InventoryLot) => l.id === updatedLot.id,
+        );
+        if (idx !== -1) {
+          (state.inventoryLotsByProductId as any).data[idx] = {
+            ...(state.inventoryLotsByProductId as any).data[idx],
+            ...updatedLot,
+          };
+        }
+      }
+
+      // Update in detailed view if matches
+      if (
+        state.inventoryLotDetail &&
+        (state.inventoryLotDetail as any).id === updatedLot.id
+      ) {
+        state.inventoryLotDetail = {
+          ...state.inventoryLotDetail,
+          ...updatedLot,
+        };
+      }
+    },
+    // Real-time: Delete inventory lot
+    deleteInventoryLotRealtime: (state, action) => {
+      const { id } = action.payload;
+      if (Array.isArray(state.inventoryLots)) {
+        state.inventoryLots = state.inventoryLots.filter((lot) => lot.id !== id);
+      } else if (
+        state.inventoryLots &&
+        Array.isArray((state.inventoryLots as any).data)
+      ) {
+        (state.inventoryLots as any).data = (
+          state.inventoryLots as any
+        ).data.filter((lot: InventoryLot) => lot.id !== id);
+        if ((state.inventoryLots as any).pagination) {
+          (state.inventoryLots as any).pagination.total = Math.max(
+            ((state.inventoryLots as any).pagination.total || 1) - 1,
+            0,
+          );
+        }
+      }
+
+      // Update in inventoryLotsByProductId
+      if (
+        state.inventoryLotsByProductId &&
+        Array.isArray((state.inventoryLotsByProductId as any).data)
+      ) {
+        const initialLength = (state.inventoryLotsByProductId as any).data
+          .length;
+        (state.inventoryLotsByProductId as any).data = (
+          state.inventoryLotsByProductId as any
+        ).data.filter((lot: InventoryLot) => lot.id !== id);
+        if (
+          (state.inventoryLotsByProductId as any).data.length < initialLength &&
+          (state.inventoryLotsByProductId as any).pagination
+        ) {
+          (state.inventoryLotsByProductId as any).pagination.total = Math.max(
+            ((state.inventoryLotsByProductId as any).pagination.total || 1) - 1,
+            0,
+          );
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -419,5 +555,10 @@ const inventoryLotSlice = createSlice({
       });
   },
 });
-export const { resetInventoryLotDetail } = inventoryLotSlice.actions;
+export const {
+  resetInventoryLotDetail,
+  addInventoryLot,
+  updateInventoryLotRealtime,
+  deleteInventoryLotRealtime,
+} = inventoryLotSlice.actions;
 export default inventoryLotSlice.reducer;

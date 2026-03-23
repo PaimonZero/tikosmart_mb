@@ -102,6 +102,19 @@ export const fetchTasks = createAsyncThunk(
   },
 );
 
+// 📋 Lấy thêm danh sách tasks (Pagination / Infinite Scroll)
+export const fetchMoreTasks = createAsyncThunk(
+  "tasks/fetchMoreList",
+  async (params: TaskParams = {}, { rejectWithValue }) => {
+    try {
+      const res = await listTasksAPI(params);
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  },
+);
+
 // 🔍 Lấy chi tiết task
 export const fetchTaskById = createAsyncThunk(
   "tasks/fetchById",
@@ -323,6 +336,51 @@ const taskSlice = createSlice({
     clearTaskItems: (state) => {
       state.taskItems = [];
     },
+    // Real-time actions
+    addPreparationTaskRealtime: (state, action) => {
+      const newTask = action.payload;
+      if (Array.isArray(state.tasks)) {
+        state.tasks.unshift(newTask);
+      } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
+        (state.tasks as any).data.unshift(newTask);
+        if ((state.tasks as any).pagination) {
+          (state.tasks as any).pagination.total += 1;
+        }
+      }
+    },
+    updatePreparationTaskRealtime: (state, action) => {
+      const updatedTask = action.payload;
+      // Update in list
+      if (Array.isArray(state.tasks)) {
+        const idx = state.tasks.findIndex((t) => t.id === updatedTask.id);
+        if (idx !== -1) {
+          state.tasks[idx] = { ...state.tasks[idx], ...updatedTask };
+        }
+      } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
+        const idx = (state.tasks as any).data.findIndex((t: any) => t.id === updatedTask.id);
+        if (idx !== -1) {
+          (state.tasks as any).data[idx] = { ...(state.tasks as any).data[idx], ...updatedTask };
+        }
+      }
+      // Update selectedTask if viewing
+      if (state.selectedTask && state.selectedTask.id === updatedTask.id) {
+        state.selectedTask = { ...state.selectedTask, ...updatedTask };
+      }
+    },
+    deletePreparationTaskRealtime: (state, action) => {
+      const deletedId = typeof action.payload === 'object' ? action.payload.id : action.payload;
+      if (Array.isArray(state.tasks)) {
+        const initialLength = state.tasks.length;
+        state.tasks = state.tasks.filter((t) => t.id !== deletedId);
+        // ... update total if needed
+      } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
+        const initialLength = (state.tasks as any).data.length;
+        (state.tasks as any).data = (state.tasks as any).data.filter((t: any) => t.id !== deletedId);
+        if ((state.tasks as any).data.length < initialLength && (state.tasks as any).pagination) {
+          (state.tasks as any).pagination.total -= 1;
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -340,6 +398,37 @@ const taskSlice = createSlice({
           (action.payload as any)?.message || action.error.message;
       })
 
+      /* -------- FETCH MORE LIST (INFINITE SCROLL) -------- */
+      .addCase(fetchMoreTasks.pending, (state) => {
+        // Not setting "loading" to avoid replacing the big full-screen loader
+        // Could add a fetchMoreStatus in the future if needed
+      })
+      .addCase(fetchMoreTasks.fulfilled, (state, action) => {
+        const newData = action.payload?.data || action.payload || [];
+        // Extract array if it was wrapped or append directly
+        const freshItems = Array.isArray(newData) ? newData : [];
+
+        // Appending to the existing array safely based on structure
+        if ((state.tasks as any).data) {
+          (state.tasks as any).data = [
+            ...(state.tasks as any).data,
+            ...freshItems,
+          ];
+          // Also update pagination meta if provided by payload
+          if (action.payload?.total !== undefined) {
+            (state.tasks as any).total = action.payload.total;
+          }
+        } else if (Array.isArray(state.tasks)) {
+          state.tasks = [...state.tasks, ...freshItems];
+        } else {
+          state.tasks = action.payload;
+        }
+      })
+      .addCase(fetchMoreTasks.rejected, (state, action) => {
+        state.fetchError =
+          (action.payload as any)?.message || action.error.message;
+      })
+
       /* -------- FETCH BY ID -------- */
       .addCase(fetchTaskById.pending, (state) => {
         state.fetchStatus = "loading";
@@ -347,7 +436,10 @@ const taskSlice = createSlice({
       })
       .addCase(fetchTaskById.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        state.selectedTask = action.payload?.data || ({} as any);
+        const payload = action.payload;
+        const data = payload?.data || payload;
+        const items = payload?.items || data?.items || [];
+        state.selectedTask = { ...(data || {}), items };
       })
       .addCase(fetchTaskById.rejected, (state, action) => {
         state.fetchStatus = "failed";
@@ -615,5 +707,11 @@ const taskSlice = createSlice({
   },
 });
 
-export const { clearSelectedTask, clearTaskItems } = taskSlice.actions;
+export const { 
+  clearSelectedTask, 
+  clearTaskItems, 
+  addPreparationTaskRealtime, 
+  updatePreparationTaskRealtime, 
+  deletePreparationTaskRealtime 
+} = taskSlice.actions;
 export default taskSlice.reducer;

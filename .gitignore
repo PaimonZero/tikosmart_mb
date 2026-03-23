@@ -45,3 +45,6 @@ app-example
 
 # JetBrains
 .idea/
+
+# agent
+.agent/

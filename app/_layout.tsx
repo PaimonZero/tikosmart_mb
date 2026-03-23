@@ -18,7 +18,16 @@ import "react-native-reanimated";
 import { Provider } from "react-redux";
 import { Toaster } from "sonner-native";
 import "./globals.css";
+import CustomSplash from "@/components/CustomSplash";
 import useUserStatusSocket from "@/hooks/useUserStatusSocket";
+import useNotificationSocket from "@/hooks/socket-events/useNotificationSocket";
+import useInventoryEvents from "@/hooks/socket-events/useInventoryEvents";
+import useSalesOrderEvents from "@/hooks/socket-events/useSalesOrderEvents";
+import { connectSocket, disconnectSocket } from "@/utils/socketManager";
+import useSubscribeRooms from "@/hooks/useSubscribeRooms";
+import useProductEvents from "@/hooks/socket-events/useProductEvents";
+import usePreparationEvents from "@/hooks/socket-events/usePreparationEvents";
+import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
 
 export const unstable_settings = {};
 
@@ -29,11 +38,37 @@ function RootLayoutInner() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, hasFetchedProfile, hasHydrated, user } =
+  const { isAuthenticated, hasFetchedProfile, hasHydrated, user, token } =
     useAppSelector((s) => s.auth);
+  const [isSplashAnimationDone, setSplashAnimationDone] = React.useState(false);
     
-  // Cập nhật trạng thái online realtime ngay sau khi login
+  // Realtime hooks
   useUserStatusSocket();
+  useNotificationSocket();
+  useInventoryEvents();
+  useSalesOrderEvents();
+  useProductEvents();
+  usePreparationEvents();
+  useFinanceAREvents();
+  
+  // Subscribe to basic rooms
+  useSubscribeRooms([
+    'room:sales_orders', 
+    'room:inventory', 
+    'room:preparation', 
+    'room:finance_ar'
+  ]);
+
+  // Connect/Disconnect socket based on auth state
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      connectSocket(token);
+    } else {
+      if (hasHydrated) {
+        disconnectSocket();
+      }
+    }
+  }, [isAuthenticated, token, hasHydrated]);
   useEffect(() => {
     if (!hasHydrated) {
       void dispatch(hydrateAuth());
@@ -57,9 +92,18 @@ function RootLayoutInner() {
     return () => setAuthExpiredHandler(null);
   }, [dispatch, router]);
 
+  const isAppReady = hasHydrated && (!isAuthenticated || hasFetchedProfile);
+
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      {!isSplashAnimationDone && (
+        <CustomSplash 
+          isAppReady={isAppReady} 
+          onAnimationFinish={() => setSplashAnimationDone(true)} 
+        />
+      )}
       <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(seller)" options={{ headerShown: false }} />
@@ -76,10 +120,6 @@ function RootLayoutInner() {
             title: "Đổi mật khẩu",
             headerTitleAlign: "center",
           }}
-        />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
         />
       </Stack>
       <Toaster

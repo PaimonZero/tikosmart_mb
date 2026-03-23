@@ -36,9 +36,19 @@ export default function SellerTabLayout() {
             <Tabs.Screen
                 name="products"
                 options={{
-                    title: "Danh sách sản phẩm",
+                    title: "Sản phẩm",
                     tabBarIcon: ({ color }) => (
                         <Feather name="package" size={24} color={color} />
+                    ),
+                    headerShown: false,
+                }}
+            />
+            <Tabs.Screen
+                name="salesOrders"
+                options={{
+                    title: "Đơn hàng",
+                    tabBarIcon: ({ color }) => (
+                        <Feather name="shopping-cart" size={24} color={color} />
                     ),
                     headerShown: false,
                 }}

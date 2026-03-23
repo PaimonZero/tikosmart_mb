@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import {
   createUser as createUserAPI,
+  getUserById as getUserAPI,
   getListUsers as listUsersAPI,
   updateUser as updateUserAPI,
   updateUserStatus as updateUserStatusAPI,
@@ -104,6 +105,21 @@ export const updateUserStatus = createAsyncThunk<
       const errorMessage =
         error.response?.data?.message ||
         "Có lỗi xảy ra khi cập nhật trạng thái người dùng";
+      return rejectWithValue(errorMessage);
+    }
+  },
+);
+
+export const fetchUserById = createAsyncThunk<any, string, { rejectValue: string }>(
+  "user/fetchUserById",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const response = await getUserAPI(userId);
+      return response.data.data || response.data;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "Có lỗi xảy ra khi tải thông tin người dùng";
       return rejectWithValue(errorMessage);
     }
   },

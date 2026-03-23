@@ -129,7 +129,40 @@ export const updateSalesInvoice = createAsyncThunk(
 const salesInvoicesSlice = createSlice({
   name: "salesInvoices",
   initialState,
-  reducers: {},
+  reducers: {
+    // Real-time actions
+    addSalesInvoiceRealtime: (state, action) => {
+      const newInvoice = action.payload;
+      if (state.salesInvoices && Array.isArray(state.salesInvoices.data)) {
+        state.salesInvoices.data.unshift(newInvoice);
+        if (state.salesInvoices.pagination) {
+          state.salesInvoices.pagination.total = (state.salesInvoices.pagination.total || 0) + 1;
+        }
+      }
+    },
+    updateSalesInvoiceRealtime: (state, action) => {
+      const updatedInvoice = action.payload;
+      if (state.salesInvoices && Array.isArray(state.salesInvoices.data)) {
+        const index = state.salesInvoices.data.findIndex((i: any) => i.id === updatedInvoice.id);
+        if (index !== -1) {
+          state.salesInvoices.data[index] = { ...state.salesInvoices.data[index], ...updatedInvoice };
+        }
+      }
+      if (state.salesInvoiceById && (state.salesInvoiceById as any).id === updatedInvoice.id) {
+        state.salesInvoiceById = { ...state.salesInvoiceById, ...updatedInvoice };
+      }
+    },
+    removeSalesInvoiceRealtime: (state, action) => {
+      const deletedId = action.payload;
+      if (state.salesInvoices && Array.isArray(state.salesInvoices.data)) {
+        const initialLength = state.salesInvoices.data.length;
+        state.salesInvoices.data = state.salesInvoices.data.filter((i: any) => i.id !== deletedId);
+        if (state.salesInvoices.data.length < initialLength && state.salesInvoices.pagination) {
+          state.salesInvoices.pagination.total = (state.salesInvoices.pagination.total || 0) - 1;
+        }
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       // lấy tất cả sales invoices có phân trang
@@ -205,5 +238,6 @@ const salesInvoicesSlice = createSlice({
       });
   },
 });
-export const {} = salesInvoicesSlice.actions;
+export const { addSalesInvoiceRealtime, updateSalesInvoiceRealtime, removeSalesInvoiceRealtime } =
+  salesInvoicesSlice.actions;
 export default salesInvoicesSlice.reducer;
