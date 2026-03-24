@@ -95,7 +95,7 @@ function RootLayoutInner() {
   const isAppReady = hasHydrated && (!isAuthenticated || hasFetchedProfile);
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       {!isSplashAnimationDone && (
         <CustomSplash 
           isAppReady={isAppReady} 
@@ -127,7 +127,7 @@ function RootLayoutInner() {
         richColors={true} // Khuyên dùng: Tự động tô màu Xanh (Success) / Đỏ (Error)
         closeButton={true} // Tùy chọn: Hiện nút X để tắt nhanh
       />
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </ThemeProvider>
   );
 }
