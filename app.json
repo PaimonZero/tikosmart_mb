@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/tikoSmart.png",
     "scheme": "tikosmartmb",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
