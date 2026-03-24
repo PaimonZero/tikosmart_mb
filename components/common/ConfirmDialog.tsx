@@ -75,7 +75,7 @@ export function ConfirmDialog({
                         <TouchableOpacity
                             onPress={onConfirm}
                             disabled={isLoading}
-                            className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center space-x-2 ${
+                            className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center space-x-2 gap-2 ${
                                 // Logic màu nền: Nếu đang loading thì nhạt hơn chút
                                 isDanger
                                     ? (isLoading ? 'bg-red-400' : 'bg-red-500')

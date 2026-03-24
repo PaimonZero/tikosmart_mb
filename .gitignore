@@ -43,5 +43,11 @@ app-example
 /android
 .env
 
+# JetBrains
+.idea/
+
 # agent
 .agent/
+
+# Package-lock.json
+package-lock.json
