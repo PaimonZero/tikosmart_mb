@@ -48,3 +48,6 @@ app-example
 
 # agent
 .agent/
+
+# Package-lock.json
+package-lock.json
