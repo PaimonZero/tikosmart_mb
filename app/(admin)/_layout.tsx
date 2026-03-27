@@ -35,7 +35,7 @@ export default function AdminTabLayout() {
                     header: () => <CustomHomeHeader />,
                 }}
             />
-            <Tabs.Screen
+            {/* <Tabs.Screen
                 name="products"
                 options={{
                     title: "Sản phẩm",
@@ -44,7 +44,7 @@ export default function AdminTabLayout() {
                     ),
                     headerShown: false,
                 }}
-            />
+            /> */}
             <Tabs.Screen
                 name="salesOrders"
                 options={{
@@ -76,6 +76,16 @@ export default function AdminTabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="deliveryRuns"
+                options={{
+                    title: "Giao hàng",
+                    tabBarIcon: ({ color }) => (
+                        <MaterialCommunityIcons name="truck-delivery" size={24} color={color} />
+                    ),
+                    headerShown: false,
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: "Tài khoản",
@@ -85,6 +95,7 @@ export default function AdminTabLayout() {
                     headerShown: false,
                 }}
             />
+
         </Tabs>
     );
 }

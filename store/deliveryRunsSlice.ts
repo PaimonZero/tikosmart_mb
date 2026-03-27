@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 import {
   cancelDeliveryRunOrder as cancelDeliveryRunOrderAPI,
   CancelDeliveryRunOrderData,
@@ -41,71 +41,46 @@ export interface Pagination {
   [key: string]: any;
 }
 
-export interface DeliveryRunsState {
-  deliveryRuns: {
-    data: DeliveryRun[];
-    pagination: Pagination;
-  };
-  deliveryRunById: DeliveryRun | {};
-  fetchStatus: "idle" | "loading" | "succeeded" | "failed";
-  fetchError: string | null;
-  createStatus: "idle" | "loading" | "succeeded" | "failed";
-  createError: string | null;
-  updateStatus: "idle" | "loading" | "succeeded" | "failed";
-  updateError: string | null;
-  deleteStatus: "idle" | "loading" | "succeeded" | "failed";
-  deleteError: string | null;
-  startStatus: "idle" | "loading" | "succeeded" | "failed";
-  startError: string | null;
-  completeStatus: "idle" | "loading" | "succeeded" | "failed";
-  completeError: string | null;
-  cancelStatus: "idle" | "loading" | "succeeded" | "failed";
-  cancelError: string | null;
-  // Delivery run orders status
-  orderStartStatus: "idle" | "loading" | "succeeded" | "failed";
-  orderStartError: string | null;
-  orderCompleteStatus: "idle" | "loading" | "succeeded" | "failed";
-  orderCompleteError: string | null;
-  orderCancelStatus: "idle" | "loading" | "succeeded" | "failed";
-  orderCancelError: string | null;
-  orderFailStatus: "idle" | "loading" | "succeeded" | "failed";
-  orderFailError: string | null;
-  orderReopenStatus: "idle" | "loading" | "succeeded" | "failed"; // ✅ Thêm state cho reopen
-  orderReopenError: string | null;
+export interface DeliveryRunSummary {
+  total: number;
+  inProgress: number;
+  completed: number;
 }
 
-const initialState: DeliveryRunsState = {
-  deliveryRuns: {
-    data: [],
-    pagination: {},
-  },
-  deliveryRunById: {},
-  fetchStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
-  fetchError: null,
-  createStatus: "idle",
-  createError: null,
-  updateStatus: "idle",
-  updateError: null,
-  deleteStatus: "idle",
-  deleteError: null,
-  startStatus: "idle",
-  startError: null,
-  completeStatus: "idle",
-  completeError: null,
-  cancelStatus: "idle",
-  cancelError: null,
+const deliveryRunsAdapter = createEntityAdapter<DeliveryRun>();
+
+const initialState = deliveryRunsAdapter.getInitialState({
+  pagination: {} as Pagination,
+  deliveryRunById: {} as DeliveryRun | {},
+  fetchStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  fetchError: null as string | null,
+  createStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  createError: null as string | null,
+  updateStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  updateError: null as string | null,
+  deleteStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  deleteError: null as string | null,
+  startStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  startError: null as string | null,
+  completeStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  completeError: null as string | null,
+  cancelStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  cancelError: null as string | null,
   // Delivery run orders status
-  orderStartStatus: "idle",
-  orderStartError: null,
-  orderCompleteStatus: "idle",
-  orderCompleteError: null,
-  orderCancelStatus: "idle",
-  orderCancelError: null,
-  orderFailStatus: "idle",
-  orderFailError: null,
-  orderReopenStatus: "idle", // ✅ Thêm state cho reopen
-  orderReopenError: null,
-};
+  orderStartStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  orderStartError: null as string | null,
+  orderCompleteStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  orderCompleteError: null as string | null,
+  orderCancelStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  orderCancelError: null as string | null,
+  orderFailStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  orderFailError: null as string | null,
+  orderReopenStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
+  orderReopenError: null as string | null,
+  summary: { total: 0, inProgress: 0, completed: 0 } as DeliveryRunSummary,
+});
+
+export type DeliveryRunsState = typeof initialState;
 
 // Lấy danh sách delivery runs
 export const fetchDeliveryRuns = createAsyncThunk(
@@ -353,15 +328,36 @@ const deliveryRunsSlice = createSlice({
   initialState,
   reducers: {
     resetDeliveryRuns: (state) => {
-      state.deliveryRuns = {
-        data: [],
-        pagination: {},
-      };
+      deliveryRunsAdapter.removeAll(state);
+      state.pagination = {};
+      state.summary = { total: 0, inProgress: 0, completed: 0 };
       state.fetchStatus = "idle";
       state.fetchError = null;
     },
     resetDeliveryRunById: (state) => {
       state.deliveryRunById = {};
+    },
+    // Real-time actions
+    addDeliveryRunRealtime: (state, action) => {
+      deliveryRunsAdapter.addOne(state, action.payload);
+      if (state.pagination.total !== undefined) {
+        state.pagination.total += 1;
+      }
+    },
+    updateDeliveryRunRealtime: (state, action) => {
+      deliveryRunsAdapter.upsertOne(state, action.payload);
+      if (
+        state.deliveryRunById &&
+        (state.deliveryRunById as any).id === action.payload.id
+      ) {
+        state.deliveryRunById = { ...state.deliveryRunById, ...action.payload };
+      }
+    },
+    deleteDeliveryRunRealtime: (state, action) => {
+      deliveryRunsAdapter.removeOne(state, action.payload.id);
+      if (state.pagination.total !== undefined) {
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
+      }
     },
   },
   extraReducers: (builder) => {
@@ -373,8 +369,16 @@ const deliveryRunsSlice = createSlice({
       })
       .addCase(fetchDeliveryRuns.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
-        state.deliveryRuns.data = action.payload.data;
-        state.deliveryRuns.pagination = action.payload.pagination;
+        const { data, pagination, summary } = action.payload;
+        if (pagination?.offset && pagination.offset > 0) {
+          deliveryRunsAdapter.addMany(state, data);
+        } else {
+          deliveryRunsAdapter.setAll(state, data);
+        }
+        state.pagination = pagination;
+        if (summary) {
+          state.summary = summary;
+        }
       })
       .addCase(fetchDeliveryRuns.rejected, (state, action) => {
         state.fetchStatus = "failed";
@@ -389,6 +393,7 @@ const deliveryRunsSlice = createSlice({
       .addCase(fetchDeliveryRunById.fulfilled, (state, action) => {
         state.fetchStatus = "succeeded";
         state.deliveryRunById = action.payload.data;
+        deliveryRunsAdapter.upsertOne(state, action.payload.data);
       })
       .addCase(fetchDeliveryRunById.rejected, (state, action) => {
         state.fetchStatus = "failed";
@@ -400,8 +405,11 @@ const deliveryRunsSlice = createSlice({
         state.createStatus = "loading";
         state.createError = null;
       })
-      .addCase(createDeliveryRun.fulfilled, (state) => {
+      .addCase(createDeliveryRun.fulfilled, (state, action) => {
         state.createStatus = "succeeded";
+        if (action.payload) {
+          deliveryRunsAdapter.addOne(state, action.payload);
+        }
       })
       .addCase(createDeliveryRun.rejected, (state, action) => {
         state.createStatus = "failed";
@@ -413,8 +421,11 @@ const deliveryRunsSlice = createSlice({
         state.updateStatus = "loading";
         state.updateError = null;
       })
-      .addCase(updateDeliveryRun.fulfilled, (state) => {
+      .addCase(updateDeliveryRun.fulfilled, (state, action) => {
         state.updateStatus = "succeeded";
+        if (action.payload) {
+          deliveryRunsAdapter.upsertOne(state, action.payload);
+        }
       })
       .addCase(updateDeliveryRun.rejected, (state, action) => {
         state.updateStatus = "failed";
@@ -426,8 +437,10 @@ const deliveryRunsSlice = createSlice({
         state.deleteStatus = "loading";
         state.deleteError = null;
       })
-      .addCase(deleteDeliveryRun.fulfilled, (state) => {
+      .addCase(deleteDeliveryRun.fulfilled, (state, action) => {
         state.deleteStatus = "succeeded";
+        // Assuming action.meta.arg is the ID
+        deliveryRunsAdapter.removeOne(state, action.meta.arg);
       })
       .addCase(deleteDeliveryRun.rejected, (state, action) => {
         state.deleteStatus = "failed";
@@ -541,6 +554,16 @@ const deliveryRunsSlice = createSlice({
   },
 });
 
-export const { resetDeliveryRuns, resetDeliveryRunById } =
-  deliveryRunsSlice.actions;
+export const {
+  resetDeliveryRuns,
+  resetDeliveryRunById,
+  addDeliveryRunRealtime,
+  updateDeliveryRunRealtime,
+  deleteDeliveryRunRealtime,
+} = deliveryRunsSlice.actions;
+
+export const deliveryRunsSelectors = deliveryRunsAdapter.getSelectors(
+  (state: any) => state.deliveryRuns,
+);
+
 export default deliveryRunsSlice.reducer;

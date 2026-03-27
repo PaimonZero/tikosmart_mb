@@ -13,6 +13,7 @@ interface ExpandableSearchBarProps {
     onSubmit: () => void;
     onClear: () => void;
     onExpandChange: (expanded: boolean) => void;
+    placeholder?: string;
 }
 
 export const ExpandableSearchBar: React.FC<ExpandableSearchBarProps> = ({
@@ -21,6 +22,7 @@ export const ExpandableSearchBar: React.FC<ExpandableSearchBarProps> = ({
     onSubmit,
     onClear,
     onExpandChange,
+    placeholder = "Tìm kiếm...",
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const inputRef = useRef<TextInput>(null);
@@ -69,7 +71,7 @@ export const ExpandableSearchBar: React.FC<ExpandableSearchBarProps> = ({
                             value={keyword}
                             onChangeText={onChangeText}
                             onSubmitEditing={handleSubmit}
-                            placeholder="Tìm kiếm sản phẩm..."
+                            placeholder={placeholder}
                             placeholderTextColor="#9CA3AF"
                             returnKeyType="search"
                             className="flex-1 ml-2.5 text-[15px] text-gray-900 font-medium h-12"
