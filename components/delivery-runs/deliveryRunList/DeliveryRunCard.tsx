@@ -3,7 +3,7 @@ import { TouchableOpacity, View, Text } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
-import { getStatusStyles } from "./utils/helpers";
+import { getStatusStyles } from "../utils/helpers";
 
 interface DeliveryRunCardProps {
     item: any;

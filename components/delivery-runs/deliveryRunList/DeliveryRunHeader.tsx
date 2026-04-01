@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { ExpandableSearchBar } from "../product/productList/ExpandableSearchBar";
+import { ExpandableSearchBar } from "../../product/productList/ExpandableSearchBar";
 
 import { FilterChips } from './FilterChips';
 

@@ -11,10 +11,15 @@ export default function DeliveryRunsLayout() {
             <Stack.Screen
                 name="deliveryRunList"
                 options={{
-                    title: 'Chuyến giao hàng',
+                    title: 'Danh sách chuyến giao',
                 }}
             />
-            {/* Sẽ thêm [id] và addDeliveryRun sau */}
+            <Stack.Screen
+                name="[id]"
+                options={{
+                    title: 'Chi tiết chuyến giao',
+                }}
+            />
         </Stack>
     );
 }

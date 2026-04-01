@@ -3,8 +3,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchDeliveryRuns, resetDeliveryRuns, deliveryRunsSelectors } from "@/store/deliveryRunsSlice";
 import { useDeliveryRunPermissions } from "@/hooks/useDeliveryRunPermissions";
-import { DeliveryRunHeader } from "@/components/delivery-runs/DeliveryRunHeader";
-import { DeliveryRunListView } from "@/components/delivery-runs/DeliveryRunListView";
+import { DeliveryRunHeader } from "@/components/delivery-runs/deliveryRunList/DeliveryRunHeader";
+import { DeliveryRunListView } from "@/components/delivery-runs/deliveryRunList/DeliveryRunListView";
 
 export default function DeliveryRunListScreen() {
     const dispatch = useAppDispatch();
@@ -64,7 +64,7 @@ export default function DeliveryRunListScreen() {
     };
 
     const onLoadMore = () => {
-        if (fetchStatus === 'succeeded' && deliveryRunsData.length < (pagination.total || 0)) {
+        if (fetchStatus === 'succeeded' && pagination.hasMore) {
             const nextOffset = (pagination.offset || 0) + (pagination.limit || 10);
             loadData(nextOffset, activeQuery, selectedStatus);
         }

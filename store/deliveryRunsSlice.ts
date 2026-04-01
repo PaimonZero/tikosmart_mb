@@ -153,9 +153,12 @@ export const deleteDeliveryRun = createAsyncThunk(
 // Bắt đầu delivery run
 export const startDeliveryRun = createAsyncThunk(
   "deliveryRuns/startDeliveryRun",
-  async (id: string, { rejectWithValue }) => {
+  async (
+    { id, data }: { id: string; data: any },
+    { rejectWithValue },
+  ) => {
     try {
-      const response = await startDeliveryRunAPI(id);
+      const response = await startDeliveryRunAPI(id, data);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || error.message);

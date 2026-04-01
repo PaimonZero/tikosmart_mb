@@ -51,7 +51,7 @@ export const DeliveryRunListView: React.FC<DeliveryRunListViewProps> = ({
     };
 
     const renderEmpty = () => {
-        if (fetchStatus === 'loading' && !refreshing) {
+        if ((fetchStatus === 'loading' || fetchStatus === 'idle') && !refreshing) {
             return (
                 <View className="flex-1 pt-4">
                     <DeliveryRunSkeleton />

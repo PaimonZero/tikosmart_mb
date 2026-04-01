@@ -1,5 +1,6 @@
 export const getStatusStyles = (status: string) => {
     switch (status) {
+        case "pending":
         case "assigned":
             return {
                 bg: "bg-gray-100",
