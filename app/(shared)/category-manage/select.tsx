@@ -6,7 +6,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CategorySelectScreen() {
@@ -29,6 +29,9 @@ export default function CategorySelectScreen() {
             return () => { };
         }, [searchQuery]) // Re-run if query changes, but mainly for when returning from Upsert
     );
+
+    const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<{ id: string, name: string } | null>(null);
 
     const loadData = (offset: number, q: string) => {
         dispatch(fetchCategories({ offset, limit: 20, q }));
@@ -61,19 +64,17 @@ export default function CategorySelectScreen() {
     };
 
     const handleDelete = (id: string, name: string) => {
-        Alert.alert(
-            "Xóa danh mục",
-            `Bạn có chắc chắn muốn xóa danh mục "${name}"?`,
-            [
-                { text: "Hủy", style: "cancel" },
-                {
-                    text: "Xóa", style: "destructive", onPress: async () => {
-                        await dispatch(deleteCategory(id));
-                        loadData(0, searchQuery);
-                    }
-                }
-            ]
-        );
+        setCategoryToDelete({ id, name });
+        setDeleteDialogVisible(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (categoryToDelete) {
+            await dispatch(deleteCategory(categoryToDelete.id));
+            setDeleteDialogVisible(false);
+            setCategoryToDelete(null);
+            loadData(0, searchQuery);
+        }
     };
 
     const renderItem = ({ item }: { item: any }) => (
@@ -151,6 +152,17 @@ export default function CategorySelectScreen() {
                         </View>
                     ) : null
                 }
+            />
+            <ConfirmDialog
+                visible={deleteDialogVisible}
+                onDismiss={() => setDeleteDialogVisible(false)}
+                onConfirm={handleConfirmDelete}
+                title="Xóa danh mục"
+                content={categoryToDelete ? `Bạn có chắc chắn muốn xóa danh mục "${categoryToDelete.name}"?` : ''}
+                isDanger={true}
+                confirmLabel="Xóa"
+                cancelLabel="Hủy"
+                isLoading={deleteStatus === 'loading'}
             />
         </SafeAreaView>
     );

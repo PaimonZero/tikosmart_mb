@@ -96,7 +96,7 @@ export default function UpdateTaskItemScreen() {
     const takePhoto = async (type: "preEvd" | "postEvd") => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("Lỗi", "Cần quyền truy cập máy ảnh để chụp ảnh.");
+            toast.error("Lỗi", { description: "Cần quyền truy cập máy ảnh để chụp ảnh." });
             return;
         }
 

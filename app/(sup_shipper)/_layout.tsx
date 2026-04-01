@@ -44,6 +44,16 @@ export default function SupShipperTabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="deliveryRuns"
+                options={{
+                    title: "Giao hàng",
+                    tabBarIcon: ({ color }) => (
+                        <IconSymbol size={28} name="truck.fill" color={color} />
+                    ),
+                    headerShown: false,
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: "Tài khoản",

@@ -105,8 +105,8 @@ export const deleteDeliveryRun = async (id: string) => {
  * Start delivery run (assigned -> in_progress)
  * Access: sup_shipper, shipper
  */
-export const startDeliveryRun = async (id: string) => {
-  return apiClient.patch(`/delivery-runs/${id}/start`);
+export const startDeliveryRun = async (id: string, data: any = {}) => {
+  return apiClient.patch(`/delivery-runs/${id}/start`, data);
 };
 
 /**

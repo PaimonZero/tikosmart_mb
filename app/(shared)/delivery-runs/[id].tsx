@@ -1,0 +1,348 @@
+import { AppDispatch, RootState } from '@/store/store';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, LayoutAnimation, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchDeliveryRunById } from '../../../store/deliveryRunsSlice';
+
+import DeliveryRunMap from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunMap';
+import FloatingRunInfoCard from '../../../components/delivery-runs/deliveryRunDetail/FloatingRunInfoCard';
+import OrderDetailItem from '../../../components/delivery-runs/deliveryRunDetail/OrderDetailItem';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import * as Location from 'expo-location';
+import { startDeliveryRun, completeDeliveryRun, cancelDeliveryRun } from '../../../store/deliveryRunsSlice';
+import { StartTripModal } from '../../../components/delivery-runs/deliveryRunDetail/StartTripModal';
+import { DeliveryRunActionButtons } from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunActionButtons';
+import { Divider } from 'react-native-paper';
+
+export default function DeliveryRunDetailScreen() {
+    const { id } = useLocalSearchParams<{ id: string }>();
+    const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
+    const insets = useSafeAreaInsets();
+
+    const { deliveryRunById, fetchStatus, fetchError } = useSelector((state: RootState) => state.deliveryRuns);
+    const loading = fetchStatus === 'loading';
+    const error = fetchError;
+    const [refreshing, setRefreshing] = useState(false);
+    const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
+
+    // Bottom Sheet setup
+    const bottomSheetRef = useRef<BottomSheet>(null);
+    const snapPoints = useMemo(() => ['35%', '70%'], []);
+
+    // Start Trip states
+    const [startModalVisible, setStartModalVisible] = useState(false);
+    const [isStarting, setIsStarting] = useState(false);
+
+    // Dialog state for general messages
+    const [dialogVisible, setDialogVisible] = useState(false);
+    const [dialogConfig, setDialogConfig] = useState<{
+        title: string;
+        content: string;
+        onConfirm?: () => void;
+        isDanger?: boolean;
+        showCancel?: boolean;
+        confirmLabel?: string;
+        isLoading?: boolean;
+    }>({
+        title: '',
+        content: '',
+    });
+
+    const userRole = useSelector((state: RootState) => state.auth.user?.role);
+    const isShipper = userRole === 'shipper';
+    const isAdminOrSup = ['admin', 'sup_shipper'].includes(userRole || '');
+
+    useEffect(() => {
+        if (id) {
+            dispatch(fetchDeliveryRunById(id));
+        }
+    }, [id, dispatch]);
+
+    const showAlert = (title: string, content: string, isDanger = false) => {
+        setDialogConfig({ title, content, isDanger, showCancel: false, onConfirm: () => setDialogVisible(false) });
+        setDialogVisible(true);
+    };
+
+    const showError = (content: string) => {
+        showAlert("Lỗi", content, true);
+    };
+
+    const showConfirm = (title: string, content: string, onConfirm: () => void, isDanger = false) => {
+        setDialogConfig({
+            title,
+            content,
+            onConfirm,
+            showCancel: true,
+            isDanger,
+            confirmLabel: 'Xác nhận'
+        });
+        setDialogVisible(true);
+    };
+
+    const toggleHeader = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setIsHeaderExpanded(!isHeaderExpanded);
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        if (id) {
+            await dispatch(fetchDeliveryRunById(id));
+        }
+        setRefreshing(false);
+    };
+
+    const handleStartTrip = async (data: { vehicle_type: 'motorcycle' | 'car'; avoid_toll: boolean }) => {
+        setIsStarting(true);
+        try {
+            // 1. Get GPS Location
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            let gpsData = {};
+
+            if (status === 'granted') {
+                try {
+                    const location = await Location.getCurrentPositionAsync({
+                        accuracy: Location.Accuracy.Balanced,
+                    });
+                    gpsData = {
+                        shipper_lat: location.coords.latitude,
+                        shipper_lng: location.coords.longitude,
+                    };
+                } catch (e) {
+                    console.warn("Failed to get location, proceeding without GPS", e);
+                }
+            }
+
+            // 2. Call API
+            await dispatch(startDeliveryRun({
+                id: id!,
+                data: {
+                    ...data,
+                    ...gpsData
+                }
+            })).unwrap();
+
+            setStartModalVisible(false);
+            onRefresh();
+            showAlert("Thành công", "Chuyến giao hàng đã chính thức bắt đầu!");
+        } catch (err: any) {
+            showError(err || "Không thể bắt đầu chuyến giao hàng");
+        } finally {
+            setIsStarting(false);
+        }
+    };
+
+    const handleCompleteTrip = async () => {
+        showConfirm(
+            "Hoàn thành chuyến đi",
+            "Xác nhận bạn đã hoàn thành tất cả các điểm dừng và kết thúc chuyến đi này?",
+            async () => {
+                setDialogConfig(prev => ({ ...prev, isLoading: true }));
+                try {
+                    await dispatch(completeDeliveryRun(id!)).unwrap();
+                    setDialogVisible(false);
+                    onRefresh();
+                    showAlert("Chúc mừng", "Bạn đã hoàn thành chuyến giao hàng!");
+                } catch (err: any) {
+                    setDialogVisible(false);
+                    setTimeout(() => showError(err || "Không thể hoàn thành chuyến đi"), 100);
+                }
+            }
+        );
+    };
+
+    const handleCancelTrip = async () => {
+        showConfirm(
+            "Hủy chuyến đi",
+            "Bạn có chắc chắn muốn hủy toàn bộ chuyến giao hàng này không? Hành động này không thể hoàn tác.",
+            async () => {
+                setDialogConfig(prev => ({ ...prev, isLoading: true }));
+                try {
+                    await dispatch(cancelDeliveryRun(id!)).unwrap();
+                    setDialogVisible(false);
+                    onRefresh();
+                    showAlert("Đã hủy", "Chuyến giao hàng đã thực hiện hủy thành công.");
+                } catch (err: any) {
+                    setDialogVisible(false);
+                    setTimeout(() => showError(err || "Không thể hủy chuyến đi"), 100);
+                }
+            },
+            true // isDanger
+        );
+    };
+
+    if (loading && !refreshing && (!deliveryRunById || !Object.keys(deliveryRunById).length)) {
+        return (
+            <View className="flex-1 bg-white items-center justify-center">
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text className="text-slate-500 mt-4 font-medium">Đang tải chi tiết chuyến giao...</Text>
+            </View>
+        );
+    }
+
+    if (error && (!deliveryRunById || !Object.keys(deliveryRunById).length)) {
+        return (
+            <View className="flex-1 bg-white items-center justify-center px-10">
+                <View className="w-20 h-20 bg-red-50 rounded-full items-center justify-center mb-4">
+                    <Ionicons name="alert-circle" size={40} color="#EF4444" />
+                </View>
+                <Text className="text-slate-900 text-lg font-bold text-center">
+                    Không thể tải dữ liệu
+                </Text>
+                <Text className="text-slate-500 text-sm mt-2 text-center">
+                    {error || "Đã có lỗi xảy ra khi tải thông tin chi tiết."}
+                </Text>
+                <TouchableOpacity
+                    onPress={onRefresh}
+                    className="mt-6 bg-blue-500 px-6 py-3 rounded-xl shadow-sm"
+                >
+                    <Text className="text-white font-bold">Thử lại</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    if (!deliveryRunById || !Object.keys(deliveryRunById).length) return null;
+
+    const run = deliveryRunById as any;
+
+    return (
+        <View style={styles.container}>
+
+            {/* 1. Background Map */}
+            <View style={StyleSheet.absoluteFillObject}>
+                <DeliveryRunMap run={run} />
+            </View>
+
+            {/* Top Navigation Layer */}
+            <View
+                style={{ top: insets.top + 10 }}
+                className="flex-row items-start px-4 w-full absolute z-30 gap-3"
+            >
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg active:bg-slate-50 border border-slate-100 mt-1.5"
+                >
+                    <Ionicons name="chevron-back" size={28} color="#1E293B" />
+                </TouchableOpacity>
+
+                <FloatingRunInfoCard
+                    run={run}
+                    isExpanded={isHeaderExpanded}
+                    onToggle={toggleHeader}
+                    className="flex-1 shadow-lg"
+                />
+            </View>
+
+            {/* 4. Bottom Sheet for Order List */}
+            <BottomSheet
+                ref={bottomSheetRef}
+                index={0}
+                snapPoints={snapPoints}
+                handleIndicatorStyle={{ backgroundColor: '#CBD5E1', width: 40 }}
+                backgroundStyle={{ backgroundColor: '#F8FAFC', borderRadius: 32 }}
+                style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 10,
+                    elevation: 999,
+                    zIndex: 999,
+                }}
+            >
+                <BottomSheetFlatList
+                    data={run.orders || []}
+                    keyExtractor={(item: any) => item.id}
+                    contentContainerStyle={{
+                        paddingHorizontal: 24,
+                        paddingBottom: insets.bottom + 20,
+                        paddingTop: 10
+                    }}
+                    renderItem={({ item, index }: { item: any, index: number }) => (
+                        <OrderDetailItem
+                            order={item}
+                            index={index}
+                            isLast={index === (run.orders?.length || 0) - 1}
+                            runStatus={run.status}
+                            avoidToll={run.avoid_toll}
+                            onRefresh={onRefresh}
+                        />
+                    )}
+                    ListHeaderComponent={
+                        <View className="mb-2">
+                            <View className="flex-row items-center justify-between py-4">
+                                <View className="flex-row items-center">
+                                    <View className="bg-blue-100/50 w-10 h-10 rounded-full items-center justify-center mr-3">
+                                        <Feather name="list" size={20} color="#3B82F6" />
+                                    </View>
+                                    <View>
+                                        <Text className="text-slate-400 text-sm uppercase font-bold tracking-widest">Danh sách lộ trình</Text>
+                                        <Text className="text-slate-900 font-bold text-base">Giao {run.orders?.length || 0} điểm dừng</Text>
+                                    </View>
+                                </View>
+                                <View className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                            </View>
+
+                            <Divider/>
+
+                            <DeliveryRunActionButtons
+                                status={run.status}
+                                isAdminOrSup={isAdminOrSup}
+                                isShipper={isShipper}
+                                isAllOrdersProcessed={run.orders?.every((o: any) => o.status === 'completed' || o.status === 'cancelled')}
+                                onStart={() => setStartModalVisible(true)}
+                                onComplete={handleCompleteTrip}
+                                onCancel={handleCancelTrip}
+                            />
+                        </View>
+                    }
+                    ListEmptyComponent={
+                        <View className="py-20 items-center">
+                            <Ionicons name="document-text-outline" size={48} color="#CBD5E1" />
+                            <Text className="text-slate-400 mt-2 font-medium">Không có đơn hàng nào</Text>
+                        </View>
+                    }
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#3B82F6"]} />
+                    }
+                />
+            </BottomSheet>
+
+            <StartTripModal
+                visible={startModalVisible}
+                onClose={() => setStartModalVisible(false)}
+                onConfirm={handleStartTrip}
+                isLoading={isStarting}
+            />
+
+            <ConfirmDialog
+                visible={dialogVisible}
+                onDismiss={() => setDialogVisible(false)}
+                onConfirm={dialogConfig.onConfirm || (() => setDialogVisible(false))}
+                title={dialogConfig.title}
+                content={dialogConfig.content}
+                isDanger={dialogConfig.isDanger}
+                showCancel={dialogConfig.showCancel}
+                confirmLabel="Đồng ý"
+                isLoading={(dialogConfig as any).isLoading}
+            />
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f1f5f9',
+    },
+    metaCard: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+    }
+});

@@ -13,6 +13,8 @@ interface ConfirmDialogProps {
     confirmLabel?: string;
     isDanger?: boolean;
     isLoading?: boolean;
+    showCancel?: boolean;
+    iconName?: any;
 }
 
 export function ConfirmDialog({
@@ -25,12 +27,14 @@ export function ConfirmDialog({
     confirmLabel = 'Đồng ý',
     isDanger = false,
     isLoading = false,
+    showCancel = true,
+    iconName: customIconName,
 }: ConfirmDialogProps) {
 
     // Xác định màu chủ đạo dựa trên isDanger
     const primaryColor = isDanger ? '#ef4444' : '#3b82f6'; // Red-500 : Blue-500
     const bgColor = isDanger ? 'bg-red-50' : 'bg-blue-50';
-    const iconName = isDanger ? 'warning-amber' : 'info-outline';
+    const iconName = customIconName || (isDanger ? 'warning-amber' : 'info-outline');
 
     return (
         <Portal>
@@ -60,15 +64,17 @@ export function ConfirmDialog({
                     {/* 4. BUTTON GROUP: Nút to, dễ bấm */}
                     <View className="flex-row w-full gap-6">
                         {/* Nút Hủy */}
-                        <TouchableOpacity
-                            onPress={onDismiss}
-                            disabled={isLoading}
-                            className="flex-1 py-3.5 bg-gray-100 rounded-xl items-center justify-center active:bg-gray-200"
-                        >
-                            <Text className="text-gray-700 font-semibold text-base">
-                                {cancelLabel}
-                            </Text>
-                        </TouchableOpacity>
+                        {showCancel && (
+                            <TouchableOpacity
+                                onPress={onDismiss}
+                                disabled={isLoading}
+                                className="flex-1 py-3.5 bg-gray-100 rounded-xl items-center justify-center active:bg-gray-200"
+                            >
+                                <Text className="text-gray-700 font-semibold text-base">
+                                    {cancelLabel}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
                         {/* Nút Xác nhận */}
 

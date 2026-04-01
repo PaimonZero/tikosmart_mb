@@ -26,6 +26,7 @@ import TaskReviewInfo from "@/components/task-manage/TaskDetail/TaskReviewInfo";
 import TaskProductList from "@/components/task-manage/TaskDetail/TaskProductList";
 import TaskTimeline from "@/components/task-manage/TaskDetail/TaskTimeline";
 import StatusBadge from "@/components/task-manage/TaskList/StatusBadge";
+import { toast } from "sonner-native";
 
 export default function TaskDetailScreen() {
     const { id: taskIdParam } = useLocalSearchParams();
@@ -71,7 +72,7 @@ export default function TaskDetailScreen() {
             await fetchMissingInfo(items);
         } catch (error) {
             console.error("Failed to load task details", error);
-            Alert.alert("Lỗi", "Không thể tải chi tiết nhiệm vụ.");
+            toast.error("Lỗi", { description: "Không thể tải chi tiết nhiệm vụ." });
         } finally {
             setLoading(false);
         }

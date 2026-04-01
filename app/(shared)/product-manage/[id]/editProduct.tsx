@@ -182,7 +182,7 @@ export default function EditProductScreen() {
         if (mode === 'camera') {
             const permission = await ImagePicker.requestCameraPermissionsAsync();
             if (!permission.granted) {
-                Alert.alert("Quyền truy cập", "Cần quyền truy cập camera để chụp ảnh");
+                toast.error("Quyền truy cập", { description: "Cần quyền truy cập camera để chụp ảnh" });
                 return;
             }
             result = await ImagePicker.launchCameraAsync(options);
