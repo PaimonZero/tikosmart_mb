@@ -78,6 +78,8 @@ const initialState = deliveryRunsAdapter.getInitialState({
   orderReopenStatus: "idle" as "idle" | "loading" | "succeeded" | "failed",
   orderReopenError: null as string | null,
   summary: { total: 0, inProgress: 0, completed: 0 } as DeliveryRunSummary,
+  // Real-time shipper tracking
+  shipperLocation: null as { lat: number; lng: number; lastUpdate: string; vehicle_type?: string } | null,
 });
 
 export type DeliveryRunsState = typeof initialState;
@@ -362,6 +364,14 @@ const deliveryRunsSlice = createSlice({
         state.pagination.total = Math.max(0, state.pagination.total - 1);
       }
     },
+    updateShipperLocation: (state, action) => {
+       state.shipperLocation = {
+          lat: action.payload.lat,
+          lng: action.payload.lng,
+          lastUpdate: action.payload.timestamp || new Date().toISOString(),
+          vehicle_type: action.payload.vehicle_type || (state.deliveryRunById as any)?.vehicle_type
+       };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -563,6 +573,7 @@ export const {
   addDeliveryRunRealtime,
   updateDeliveryRunRealtime,
   deleteDeliveryRunRealtime,
+  updateShipperLocation
 } = deliveryRunsSlice.actions;
 
 export const deliveryRunsSelectors = deliveryRunsAdapter.getSelectors(

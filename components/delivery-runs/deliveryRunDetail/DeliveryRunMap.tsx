@@ -1,7 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
+import { Truck } from 'lucide-react-native';
 
 interface DeliveryRunMapProps {
     run: any;
@@ -79,8 +82,106 @@ const CustomMarkerWrapper = React.memo(({ marker }: { marker: any }) => {
     );
 });
 
+const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { latitude: number, longitude: number }, vehicleType?: string }) => {
+    const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+
+    React.useEffect(() => {
+        setTracksViewChanges(true);
+        const timer = setTimeout(() => setTracksViewChanges(false), 500);
+        return () => clearTimeout(timer);
+    }, [coordinate.latitude, coordinate.longitude, vehicleType]);
+
+    // Pulsing effect
+    React.useEffect(() => {
+        const pulse = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.5,
+                    duration: 1500,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 0,
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        pulse.start();
+        return () => pulse.stop();
+    }, []);
+
+    const opacity = pulseAnim.interpolate({
+        inputRange: [1, 1.5],
+        outputRange: [0.6, 0]
+    });
+
+    return (
+        <Marker 
+            coordinate={coordinate} 
+            anchor={{ x: 0.5, y: 0.5 }} 
+            zIndex={2000}
+            tracksViewChanges={tracksViewChanges}
+            title="Vị trí của bạn"
+        >
+            <View className="items-center justify-center">
+                {/* Pulsing Circle */}
+                <Animated.View 
+                    style={{
+                        position: 'absolute',
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: '#3B82F6',
+                        transform: [{ scale: pulseAnim }],
+                        opacity: opacity,
+                    }}
+                />
+                
+                <View 
+                    style={{
+                        backgroundColor: '#3B82F6',
+                        width: 38,
+                        height: 38,
+                        borderRadius: 19,
+                        borderWidth: 3,
+                        borderColor: 'white',
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.4,
+                        shadowRadius: 5,
+                        elevation: 10,
+                    }}
+                    className="items-center justify-center"
+                >
+                    <Truck size={22} color="white" />
+                </View>
+                <View 
+                    style={{
+                        width: 0,
+                        height: 0,
+                        backgroundColor: "transparent",
+                        borderStyle: "solid",
+                        borderLeftWidth: 6,
+                        borderRightWidth: 6,
+                        borderBottomWidth: 10,
+                        borderLeftColor: "transparent",
+                        borderRightColor: "transparent",
+                        borderBottomColor: "#3B82F6",
+                        transform: [{ rotate: "180deg" }],
+                        marginTop: -2
+                    }}
+                />
+            </View>
+        </Marker>
+    );
+});
+
 export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
     const mapRef = useRef<MapView>(null);
+    const shipperLocation = useSelector((state: RootState) => state.deliveryRuns.shipperLocation);
 
     // 1. Parse route coordinates from GeoJSON or fallback to straight lines
     const routeCoordinates = useMemo(() => {
@@ -101,22 +202,40 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 }
 
                 if (coords.length > 0) {
-                    return coords.map((coord: [number, number]) => ({
+                    const parsedPoints = coords.map((coord: [number, number]) => ({
                         latitude: coord[1],
                         longitude: coord[0],
                     }));
+                    return parsedPoints;
                 }
             } catch (e) {
                 console.error('[DeliveryRunMap] Failed to parse route geometry:', e);
             }
         }
+        
 
         // Fallback: Create straight lines between points if routeGeometry is missing/invalid
         const points = [];
+        
+        // 1. Start from defined start position
         if (run.startLat && run.startLng) {
             points.push({ latitude: parseFloat(run.startLat), longitude: parseFloat(run.startLng) });
         }
 
+        // 2. MUST include Warehouse if it's different from start position
+        const warehouseLat = run.warehouseLat || run.warehouse?.[0]?.lat;
+        const warehouseLng = run.warehouseLng || run.warehouse?.[0]?.lng;
+        if (warehouseLat && warehouseLng) {
+            const wLat = parseFloat(warehouseLat);
+            const wLng = parseFloat(warehouseLng);
+            
+            // Only add if not too close to start point to avoid redundant points
+            if (points.length === 0 || Math.abs(points[0].latitude - wLat) > 0.0001) {
+                points.push({ latitude: wLat, longitude: wLng });
+            }
+        }
+
+        // 3. Add orders in sequence
         const sortedOrders = [...(run.orders || [])].sort((a, b) => (a.routeSeq ?? 0) - (b.routeSeq ?? 0));
         sortedOrders.forEach(order => {
             if (order.customer?.lat && order.customer?.lng) {
@@ -128,19 +247,43 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
         });
 
         return points;
-    }, [run.routeGeometry, run.orders, run.startLat, run.startLng]);
+    }, [run.routeGeometry, run.orders, run.startLat, run.startLng, run.warehouseLat]);
+ 
+    // 1.5. Guide line from Shipper to the start of the official route
+    const leaderLineCoords = useMemo(() => {
+        if (!shipperLocation || run.status === 'completed' || routeCoordinates.length === 0) return null;
+
+        const firstPoint = routeCoordinates[0];
+        const shipperLat = parseFloat(shipperLocation.lat as any);
+        const shipperLng = parseFloat(shipperLocation.lng as any);
+
+        // Calculate distance crude improvement: 
+        // If leader line is > 10km, it's likely a data mismatch or they are WAY off course.
+        // Don't show it to avoid "cross-sea" artifacts.
+        const latDiff = Math.abs(shipperLat - firstPoint.latitude);
+        const lngDiff = Math.abs(shipperLng - firstPoint.longitude);
+        if (latDiff > 0.1 || lngDiff > 0.1) return null; // approx > 10km
+
+        return [
+            { latitude: shipperLat, longitude: shipperLng },
+            firstPoint
+        ];
+    }, [shipperLocation, run.status, routeCoordinates]);
 
     // 2. Prepare markers
     const markers = useMemo(() => {
         const list: any[] = [];
 
-        // Origin (Warehouse)
-        if (run.startLat && run.startLng) {
+        // Origin (Warehouse) - Use warehouse coordinates from department
+        const warehouseLat = run.warehouseLat || run.startLat;
+        const warehouseLng = run.warehouseLng || run.startLng;
+
+        if (warehouseLat && warehouseLng) {
             list.push({
                 id: 'origin',
                 coordinate: {
-                    latitude: parseFloat(run.startLat),
-                    longitude: parseFloat(run.startLng),
+                    latitude: parseFloat(warehouseLat),
+                    longitude: parseFloat(warehouseLng),
                 },
                 title: 'Kho hàng / Điểm bắt đầu',
                 type: 'origin',
@@ -173,16 +316,28 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
 
     // 3. Auto-fit logic
     useEffect(() => {
-        if (mapRef.current && routeCoordinates.length > 0) {
-            // Give a small delay to ensure map is ready
-            setTimeout(() => {
-                mapRef.current?.fitToCoordinates(routeCoordinates, {
-                    edgePadding: { top: 120, right: 60, bottom: 250, left: 60 },
-                    animated: true,
+        if (mapRef.current) {
+            const coordsToFit = [...routeCoordinates];
+            
+            // Add shipper location to fit
+            if (shipperLocation && run.status !== 'completed') {
+                coordsToFit.push({ 
+                    latitude: parseFloat(shipperLocation.lat as any), 
+                    longitude: parseFloat(shipperLocation.lng as any) 
                 });
-            }, 500);
+            }
+
+            if (coordsToFit.length > 0) {
+                // Give a small delay to ensure map is ready
+                setTimeout(() => {
+                    mapRef.current?.fitToCoordinates(coordsToFit, {
+                        edgePadding: { top: 120, right: 60, bottom: 250, left: 60 },
+                        animated: true,
+                    });
+                }, 500);
+            }
         }
-    }, [routeCoordinates]);
+    }, [routeCoordinates, leaderLineCoords, shipperLocation, run.status]);
 
     if (routeCoordinates.length === 0 && markers.length === 0) {
         return (
@@ -201,7 +356,17 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 provider={PROVIDER_GOOGLE}
                 style={StyleSheet.absoluteFillObject}
             >
-                {/* Route Polyline */}
+                {/* Leader Line (Shipper to Route Start) */}
+                {leaderLineCoords && (
+                    <Polyline
+                        coordinates={leaderLineCoords}
+                        strokeColor="#3B82F6"
+                        strokeWidth={2}
+                        lineDashPattern={[2, 5]}
+                    />
+                )}
+
+                {/* Route Polyline (Warehouse to Orders) */}
                 {routeCoordinates.length > 0 && (
                     <Polyline
                         coordinates={routeCoordinates}
@@ -216,6 +381,17 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 {markers.map((marker) => (
                     <CustomMarkerWrapper key={marker.id} marker={marker} />
                 ))}
+
+                {/* Shipper Marker */}
+                {shipperLocation && (
+                    <ShipperMarker 
+                        coordinate={{ 
+                            latitude: parseFloat(shipperLocation.lat as any), 
+                            longitude: parseFloat(shipperLocation.lng as any) 
+                        }}
+                        vehicleType={shipperLocation.vehicle_type}
+                    />
+                )}
             </MapView>
         </View>
     );

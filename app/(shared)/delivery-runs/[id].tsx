@@ -17,6 +17,8 @@ import { startDeliveryRun, completeDeliveryRun, cancelDeliveryRun } from '../../
 import { StartTripModal } from '../../../components/delivery-runs/deliveryRunDetail/StartTripModal';
 import { DeliveryRunActionButtons } from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunActionButtons';
 import { Divider } from 'react-native-paper';
+import { useLocationTracking } from '../../../hooks/useLocationTracking';
+import useDeliveryEvents from '../../../hooks/socket-events/useDeliveryEvents';
 
 export default function DeliveryRunDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,10 +27,18 @@ export default function DeliveryRunDetailScreen() {
     const insets = useSafeAreaInsets();
 
     const { deliveryRunById, fetchStatus, fetchError } = useSelector((state: RootState) => state.deliveryRuns);
+    const run = deliveryRunById as any;
+    
     const loading = fetchStatus === 'loading';
     const error = fetchError;
     const [refreshing, setRefreshing] = useState(false);
     const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
+
+    // Socket events
+    useDeliveryEvents();
+
+    // Location Tracking setup
+    const { startTracking, stopTracking, forceUpdate } = useLocationTracking(id, run?.vehicle_type);
 
     // Bottom Sheet setup
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -62,6 +72,19 @@ export default function DeliveryRunDetailScreen() {
             dispatch(fetchDeliveryRunById(id));
         }
     }, [id, dispatch]);
+
+    // Manage tracking lifecycle
+    useEffect(() => {
+        if (isShipper && run?.status === 'in_progress' && id) {
+            startTracking();
+        } else {
+            stopTracking();
+        }
+
+        return () => {
+            stopTracking();
+        };
+    }, [run?.status, id, isShipper, startTracking, stopTracking]);
 
     const showAlert = (title: string, content: string, isDanger = false) => {
         setDialogConfig({ title, content, isDanger, showCancel: false, onConfirm: () => setDialogVisible(false) });
@@ -128,6 +151,10 @@ export default function DeliveryRunDetailScreen() {
             })).unwrap();
 
             setStartModalVisible(false);
+            
+            // 3. Start tracking immediately
+            startTracking();
+            
             onRefresh();
             showAlert("Thành công", "Chuyến giao hàng đã chính thức bắt đầu!");
         } catch (err: any) {
@@ -145,6 +172,7 @@ export default function DeliveryRunDetailScreen() {
                 setDialogConfig(prev => ({ ...prev, isLoading: true }));
                 try {
                     await dispatch(completeDeliveryRun(id!)).unwrap();
+                    stopTracking(); // Stop tracking on completion
                     setDialogVisible(false);
                     onRefresh();
                     showAlert("Chúc mừng", "Bạn đã hoàn thành chuyến giao hàng!");
@@ -208,8 +236,6 @@ export default function DeliveryRunDetailScreen() {
     }
 
     if (!deliveryRunById || !Object.keys(deliveryRunById).length) return null;
-
-    const run = deliveryRunById as any;
 
     return (
         <View style={styles.container}>

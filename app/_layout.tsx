@@ -29,6 +29,7 @@ import useProductEvents from "@/hooks/socket-events/useProductEvents";
 import usePreparationEvents from "@/hooks/socket-events/usePreparationEvents";
 import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
 import useDeliveryEvents from "@/hooks/socket-events/useDeliveryEvents";
+import "@/utils/locationTask";
 
 export const unstable_settings = {};
 

@@ -5,7 +5,8 @@ import {
   addDeliveryRunRealtime, 
   updateDeliveryRunRealtime,
   deleteDeliveryRunRealtime,
-  fetchDeliveryRunById
+  fetchDeliveryRunById,
+  updateShipperLocation
 } from '../../store/deliveryRunsSlice';
 import { AppDispatch, RootState } from '../../store/store';
 
@@ -41,6 +42,21 @@ const useDeliveryEvents = () => {
       }
     };
 
+    const handleLocationChanged = (payload: any) => {
+      // payload: { lat, lng, shipperId, runId, timestamp, vehicle_type }
+      // console.log('[Socket] Nhận cập nhật vị trí shipper:', payload);
+      
+      // Update Redux state if it's for the current run we are viewing
+      const targetRunId = payload.runId || payload.run_id;
+      
+      const idStr = currentDetailsRunId ? currentDetailsRunId.toString() : null;
+      const payloadIdStr = targetRunId ? targetRunId.toString() : null;
+
+      if (idStr && payloadIdStr && idStr === payloadIdStr) {
+        dispatch(updateShipperLocation(payload));
+      }
+    };
+
     socket.on('delivery_runs_created', handleCreated);
     socket.on('delivery_runs_updated', handleUpdated);
     socket.on('delivery_runs_deleted', handleDeleted);
@@ -49,6 +65,14 @@ const useDeliveryEvents = () => {
     socket.on('delivery_run_orders_insert', handleOrdersUpdated);
     socket.on('delivery_run_orders_update', handleOrdersUpdated);
     socket.on('delivery_run_orders_deleted', handleOrdersUpdated);
+    
+    // Tracking location
+    socket.on('driver_location_changed', handleLocationChanged);
+
+    // Subscribe to current run tracking if viewing details
+    if (currentDetailsRunId) {
+      socket.emit('subscribe_tracking', { runId: currentDetailsRunId });
+    }
 
     return () => {
       socket.off('delivery_runs_created', handleCreated);
@@ -57,6 +81,11 @@ const useDeliveryEvents = () => {
       socket.off('delivery_run_orders_insert', handleOrdersUpdated);
       socket.off('delivery_run_orders_update', handleOrdersUpdated);
       socket.off('delivery_run_orders_deleted', handleOrdersUpdated);
+      socket.off('driver_location_changed', handleLocationChanged);
+      
+      if (currentDetailsRunId) {
+        socket.emit('unsubscribe_tracking', { runId: currentDetailsRunId });
+      }
     };
   }, [dispatch, currentDetailsRunId]);
 };
