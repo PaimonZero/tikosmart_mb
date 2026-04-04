@@ -72,11 +72,20 @@ export default function DeliveryRunDetailScreen() {
 
     // Manage tracking lifecycle
     useEffect(() => {
-        if (isShipper && run?.status === 'in_progress' && id) {
-            startTracking();
-        } else {
-            stopTracking();
-        }
+        const initTracking = async () => {
+            if (isShipper && run?.status === 'in_progress' && id) {
+                try {
+                    await startTracking();
+                } catch (err: any) {
+                    // Hiển thị lỗi ra UI nếu tracking thất bại khi vào màn hình
+                    showError(err.message || "Không thể khởi động theo dõi vị trí");
+                }
+            } else {
+                stopTracking();
+            }
+        };
+
+        initTracking();
 
         return () => {
             stopTracking();
@@ -150,7 +159,12 @@ export default function DeliveryRunDetailScreen() {
             setStartModalVisible(false);
             
             // 3. Start tracking immediately
-            startTracking();
+            try {
+                await startTracking();
+            } catch (trackErr: any) {
+                console.warn("[StartTrip] Tracking start failed but trip is active:", trackErr);
+                showAlert("Cảnh báo", `Chuyến giao đã bắt đầu nhưng không thể theo dõi vị trí: ${trackErr.message}`);
+            }
             
             onRefresh();
             showAlert("Thành công", "Chuyến giao hàng đã chính thức bắt đầu!");

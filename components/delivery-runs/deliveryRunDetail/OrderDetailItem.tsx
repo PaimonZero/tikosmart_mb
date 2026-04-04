@@ -7,6 +7,8 @@ import {
 import { AppDispatch, RootState } from '@/store/store';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import dayjs from 'dayjs';
+
 import { ActivityIndicator, Linking, Modal as RNModal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -31,6 +33,11 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
     const dispatch = useDispatch<AppDispatch>();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const userRole = useSelector((state: RootState) => state.auth.user?.role);
+
+    // Logic SLA
+    const slaDate = order.orderSlaDeliveryAt ? dayjs(order.orderSlaDeliveryAt) : null;
+    const isOverdue = slaDate ? dayjs().isAfter(slaDate) : false;
+    const isUrgent = slaDate ? slaDate.diff(dayjs(), 'minute') < 60 && !isOverdue : false;
 
     // Modal states for Completion/Cancellation
     const [modalVisible, setModalVisible] = useState(false);
@@ -251,6 +258,40 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                                 {order.customer?.phone || "Không có số điện thoại"}
                             </Text>
                         </View>
+
+                        {/* SLA Delivery Time Section */}
+                        {slaDate && (
+                            <View className={clsx("flex-row items-center mt-3 px-3.5 py-2.5 rounded-2xl border", 
+                                isOverdue ? "bg-red-50 border-red-100" : 
+                                isUrgent ? "bg-orange-50 border-orange-100" : "bg-slate-50 border-slate-100"
+                            )}>
+                                <Ionicons 
+                                    name={isOverdue ? "alert-circle" : "time"} 
+                                    size={20} 
+                                    color={isOverdue ? "#EF4444" : isUrgent ? "#F97316" : "#64748B"} 
+                                />
+                                <View className="ml-2.5 flex-1">
+                                    <Text className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-0.5">Thời hạn giao hàng (SLA)</Text>
+                                    <View className="flex-row items-center">
+                                        <Text className={clsx("font-black text-[15px]", 
+                                            isOverdue ? "text-red-600" : isUrgent ? "text-orange-600" : "text-slate-900"
+                                        )}>
+                                            {slaDate.format('HH:mm - DD/MM/YYYY')}
+                                        </Text>
+                                        {isOverdue && (
+                                            <View className="ml-2 bg-red-100 px-1.5 py-0.5 rounded-md">
+                                                <Text className="text-red-700 font-black text-[9px] uppercase">TRỄ HẠN</Text>
+                                            </View>
+                                        )}
+                                        {isUrgent && (
+                                            <View className="ml-2 bg-orange-100 px-1.5 py-0.5 rounded-md">
+                                                <Text className="text-orange-700 font-black text-[9px] uppercase">KHẨN CẤP</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+                        )}
 
                         {!!order.customer?.note && (
                             <View className="flex-row items-start mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-100">
