@@ -24,11 +24,18 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
     if (!runId) return;
 
     try {
+      // 0. Check Location Services
+      const isServiceEnabled = await Location.hasServicesEnabledAsync();
+      if (!isServiceEnabled) {
+          console.error('[Tracking] Location services are disabled');
+          throw new Error('Dịch vụ vị trí (GPS) đang bị tắt. Vui lòng bật GPS để tiếp tục.');
+      }
+
       // 1. Request Foreground Permissions
       const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
       if (fgStatus !== 'granted') {
         console.warn('[Tracking] Foreground location permission denied');
-        return;
+        throw new Error('Ứng dụng cần quyền Truy cập Vị trí để hoạt động.');
       }
 
       // 2. Request Background Permissions (Always Allow)
@@ -62,22 +69,30 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
         pausesUpdatesAutomatically: true,
       });
 
-      // 5. Initial Force Update
-      const currentPos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const locationData = {
-        runId,
-        lat: currentPos.coords.latitude,
-        lng: currentPos.coords.longitude,
-        vehicle_type: vehicle_type,
-        timestamp: new Date().toISOString()
-      };
+      // 5. Initial Force Update (Try-catch riêng để không làm chết flow tracking nếu chỉ lỗi lấy tọa độ tức thời)
+      try {
+        const currentPos = await Location.getCurrentPositionAsync({ 
+          accuracy: Location.Accuracy.Balanced, // Dùng Balanced cho phát súng đầu tiên để tăng tốc độ nhận diện
+        });
+        
+        const locationData = {
+          runId,
+          lat: currentPos.coords.latitude,
+          lng: currentPos.coords.longitude,
+          vehicle_type: vehicle_type,
+          timestamp: new Date().toISOString()
+        };
 
-      emitShipperLocation(locationData);
-      dispatch(updateShipperLocation(locationData));
+        emitShipperLocation(locationData);
+        dispatch(updateShipperLocation(locationData));
+      } catch (posErr) {
+        console.warn('[Tracking] Initial position update failed, but background task is registered:', posErr);
+      }
 
       // console.log('[Tracking] Location tracking started for run:', runId);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Tracking] Error starting location tracking:', err);
+      throw err; // Re-throw để UI component (nếu cần) có thể bắt được và hiển thị popup
     }
   }, [runId, vehicle_type]);
 

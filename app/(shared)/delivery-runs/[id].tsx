@@ -39,7 +39,7 @@ export default function DeliveryRunDetailScreen() {
 
     // Bottom Sheet setup
     const bottomSheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ['35%', '70%'], []);
+    const snapPoints = useMemo(() => ['20%', '35%', '70%'], []);
 
     // Start Trip states
     const [startModalVisible, setStartModalVisible] = useState(false);
@@ -72,11 +72,20 @@ export default function DeliveryRunDetailScreen() {
 
     // Manage tracking lifecycle
     useEffect(() => {
-        if (isShipper && run?.status === 'in_progress' && id) {
-            startTracking();
-        } else {
-            stopTracking();
-        }
+        const initTracking = async () => {
+            if (isShipper && run?.status === 'in_progress' && id) {
+                try {
+                    await startTracking();
+                } catch (err: any) {
+                    // Hiển thị lỗi ra UI nếu tracking thất bại khi vào màn hình
+                    showError(err.message || "Không thể khởi động theo dõi vị trí");
+                }
+            } else {
+                stopTracking();
+            }
+        };
+
+        initTracking();
 
         return () => {
             stopTracking();
@@ -150,7 +159,12 @@ export default function DeliveryRunDetailScreen() {
             setStartModalVisible(false);
             
             // 3. Start tracking immediately
-            startTracking();
+            try {
+                await startTracking();
+            } catch (trackErr: any) {
+                console.warn("[StartTrip] Tracking start failed but trip is active:", trackErr);
+                showAlert("Cảnh báo", `Chuyến giao đã bắt đầu nhưng không thể theo dõi vị trí: ${trackErr.message}`);
+            }
             
             onRefresh();
             showAlert("Thành công", "Chuyến giao hàng đã chính thức bắt đầu!");
@@ -267,6 +281,8 @@ export default function DeliveryRunDetailScreen() {
                 ref={bottomSheetRef}
                 index={0}
                 snapPoints={snapPoints}
+                enableOverDrag={false}
+                enableDynamicSizing={false}
                 handleIndicatorStyle={{ backgroundColor: '#CBD5E1', width: 40 }}
                 backgroundStyle={{ backgroundColor: '#F8FAFC', borderRadius: 32 }}
                 style={{
@@ -282,9 +298,8 @@ export default function DeliveryRunDetailScreen() {
                     data={run.orders || []}
                     keyExtractor={(item: any) => item.id}
                     contentContainerStyle={{
-                        paddingHorizontal: 24,
+                        paddingHorizontal: 14,
                         paddingBottom: insets.bottom + 20,
-                        paddingTop: 10
                     }}
                     renderItem={({ item, index }: { item: any, index: number }) => (
                         <OrderDetailItem
@@ -297,18 +312,20 @@ export default function DeliveryRunDetailScreen() {
                         />
                     )}
                     ListHeaderComponent={
-                        <View className="mb-2">
-                            <View className="flex-row items-center justify-between py-4">
+                        <View className="mb-1">
+                            <View className="flex-row items-center justify-between py-3">
                                 <View className="flex-row items-center">
-                                    <View className="bg-blue-100/50 w-10 h-10 rounded-full items-center justify-center mr-3">
-                                        <Feather name="list" size={20} color="#3B82F6" />
+                                    <View className="bg-blue-50 w-8 h-8 rounded-xl items-center justify-center mr-3 border border-blue-100">
+                                        <Feather name="map" size={14} color="#3B82F6" />
                                     </View>
                                     <View>
-                                        <Text className="text-slate-400 text-sm uppercase font-bold tracking-widest">Danh sách lộ trình</Text>
-                                        <Text className="text-slate-900 font-bold text-base">Giao {run.orders?.length || 0} điểm dừng</Text>
+                                        <Text className="text-slate-500 text-[10px] uppercase font-black tracking-widest">Lộ trình hôm nay</Text>
+                                        <Text className="text-slate-900 font-black text-sm">Giao {run.orders?.length || 0} điểm dừng</Text>
                                     </View>
                                 </View>
-                                <View className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                <View className="bg-slate-100 px-2 py-1 rounded-lg">
+                                    <Text className="text-slate-600 font-bold text-[10px] uppercase">Cần giao</Text>
+                                </View>
                             </View>
 
                             <Divider/>

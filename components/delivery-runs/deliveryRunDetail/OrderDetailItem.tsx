@@ -7,7 +7,9 @@ import {
 import { AppDispatch, RootState } from '@/store/store';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ActivityIndicator, Linking, Modal as RNModal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import dayjs from 'dayjs';
+
+import { ActivityIndicator, Linking, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { getStatusStyles } from '../utils/helpers';
@@ -31,6 +33,11 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
     const dispatch = useDispatch<AppDispatch>();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const userRole = useSelector((state: RootState) => state.auth.user?.role);
+
+    // Logic SLA
+    const slaDate = order.orderSlaDeliveryAt ? dayjs(order.orderSlaDeliveryAt) : null;
+    const isOverdue = slaDate ? dayjs().isAfter(slaDate) : false;
+    const isUrgent = slaDate ? slaDate.diff(dayjs(), 'minute') < 60 && !isOverdue : false;
 
     // Modal states for Completion/Cancellation
     const [modalVisible, setModalVisible] = useState(false);
@@ -102,14 +109,13 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
             "Bạn có chắc muốn bắt đầu giao đơn hàng này không?",
             async () => {
                 setLoadingAction('start');
-                // Temporarily update dialog to loading state
                 setDialogConfig(prev => ({ ...prev, isLoading: true }));
                 try {
                     await dispatch(startDeliveryRunOrder(order.id)).unwrap();
                     setDialogVisible(false);
                     onRefresh();
                 } catch (err: any) {
-                    setDialogVisible(false); // Close confirm first
+                    setDialogVisible(false);
                     setTimeout(() => showError(err || "Không thể bắt đầu giao hàng"), 100);
                 } finally {
                     setLoadingAction(null);
@@ -119,10 +125,16 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
     };
 
     const handleOpenModal = (type: 'complete' | 'cancel') => {
-        if (runStatus !== 'in_progress') {
-            // showError("Bạn chỉ có thể thực hiện thao tác này khi chuyến đi đang ở trạng thái 'Đang giao hàng'.");
+        if (order.status === 'completed' || order.status === 'cancelled') {
+            setModalType(order.status === 'completed' ? 'complete' : 'cancel');
+            setModalVisible(true);
             return;
         }
+
+        if (runStatus !== 'in_progress') {
+            return;
+        }
+        
         setModalType(type);
         setModalVisible(true);
     };
@@ -194,10 +206,10 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
     };
 
     return (
-        <View className={clsx("flex-row items-stretch", !isLast && "mb-2")}>
+        <View className={clsx("flex-row items-stretch", !isLast && "mb-4")}>
             {/* Timeline Connector */}
-            <View className="items-center mr-3">
-                <View className={clsx("w-8 h-8 rounded-full items-center justify-center border-2",
+            <View className="items-center mr-3 mt-1.5">
+                <View className={clsx("w-7 h-7 rounded-full items-center justify-center border-2",
                     order.status === 'in_progress' ? "bg-blue-50 border-blue-500" :
                         order.status === 'completed' ? "bg-green-50 border-green-500" : "bg-slate-50 border-slate-300"
                 )}>
@@ -216,105 +228,111 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
             <TouchableOpacity 
                 activeOpacity={0.7}
                 onPress={() => handleOpenModal('complete')}
-                className="flex-1 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4"
+                className={clsx("flex-1 bg-white rounded-2xl border shadow-sm",
+                    order.status === 'in_progress' ? 'border-blue-200 shadow-blue-100/50' : 'border-slate-100'
+                )}
             >
-                {/* Header: Customer & Status */}
-                <View className="flex-row justify-between items-center mb-3">
-                    <View className="flex-1 mr-2">
-                        <Text className="text-slate-900 font-black text-lg leading-tight" numberOfLines={1}>
-                            {order.customer?.name || "Khách lẻ"}
-                        </Text>
-                        <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-1">
-                            Mã đơn: {order.orderNo || order.id.slice(0, 8).toUpperCase()}
-                        </Text>
+                <View className="p-3.5 pb-3">
+                    <View className="flex-row justify-between items-start mb-2">
+                        <View className="flex-1 mr-2 flex-col">
+                            <Text className="text-slate-900 font-extrabold text-base" numberOfLines={1}>
+                                {order.customer?.name || "Khách lẻ"}
+                            </Text>
+                            <Text className="text-slate-500 text-[10px] tracking-widest mt-1 font-black">
+                                MÃ ĐƠN: {order.orderNo || order.id.slice(0, 8)}
+                            </Text>
+                        </View>
+                        <View className={clsx("px-2.5 py-1 rounded-md border mt-0.5", statusStyle.bg, statusStyle.border)}>
+                            <Text className={clsx("text-[10px] font-black uppercase tracking-widest", statusStyle.text)}>
+                                {statusStyle.label}
+                            </Text>
+                        </View>
                     </View>
-                    <View className={clsx("px-3 py-1 rounded-full border", statusStyle.bg, statusStyle.border)}>
-                        <Text className={clsx("text-[10px] font-black uppercase tracking-tight", statusStyle.text)}>
-                            {statusStyle.label}
-                        </Text>
-                    </View>
-                </View>
 
-                {/* Body: Address & Price */}
-                <View className="space-y-3 mb-4 mt-2 border-t border-slate-50 pt-3">
-                    <View className="flex-col">
-                        <View className="flex-row items-start">
-                            <Ionicons name="location" size={18} color="#64748B"  />
-                            <Text className="text-slate-700 text-sm ml-2 flex-1 font-bold leading-5">
+                    {/* Address & Phone */}
+                    <View className="flex-col mb-1">
+                        <View className="flex-row items-start mb-2.5">
+                            <Ionicons name="location" size={18} color="#475569" style={{ marginTop: 2 }} />
+                            <Text className="text-slate-800 text-sm ml-1.5 flex-1 font-semibold leading-5">
                                 {order.customer?.address || "Không rõ địa chỉ"}
                             </Text>
                         </View>
-
-                        <View className="flex-row items-start mt-2">
-                            <Ionicons name="call" size={18} color="#64748B"  />
-                            <Text className="text-slate-700 text-sm ml-2 flex-1 font-medium leading-5">
+                        <View className="flex-row items-center">
+                            <Ionicons name="call" size={16} color="#475569" />
+                            <Text className="text-slate-800 text-sm ml-1.5 font-bold tracking-wide">
                                 {order.customer?.phone || "Không có số điện thoại"}
                             </Text>
                         </View>
+                    </View>
 
+                    {/* SLA Time & Note */}
+                    <View className="flex-col mt-2 space-y-2">
+                        {slaDate && (
+                            <View className={clsx("flex-row items-center ml-0.5", 
+                                isOverdue ? "text-red-600" : isUrgent ? "text-orange-600" : "text-slate-600"
+                            )}>
+                                <Ionicons name="time" size={16} color={isOverdue ? "#EF4444" : isUrgent ? "#F97316" : "#475569"} />
+                                <Text className={clsx("text-sm ml-1.5 font-bold",
+                                    isOverdue ? "text-red-600" : isUrgent ? "text-orange-600" : "text-slate-600"
+                                )}>
+                                    SLA: {slaDate.format('HH:mm - DD/MM/YYYY')}
+                                </Text>
+                            </View>
+                        )}
                         {!!order.customer?.note && (
-                            <View className="flex-row items-start mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                                <Ionicons name="information-circle" size={18} color="#EAB308" />
-                                <Text className="text-yellow-800 text-sm ml-2 flex-1 font-medium leading-5">
+                            <View className="flex-row items-start bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/60 mt-1.5">
+                                <Ionicons name="warning" size={16} color="#D97706" style={{ marginTop: 1 }}/>
+                                <Text className="text-amber-900 text-sm leading-5 font-medium ml-1.5 flex-1">
                                     {order.customer.note}
                                 </Text>
                             </View>
                         )}
-                        <View className="flex-row justify-between items-center pb-1 mt-3 w-full">
-                            {order.customer?.phone ? (
+                    </View>
+                    
+                    {/* COD & Action Buttons Inline */}
+                    <View className="flex-row items-end justify-between mt-3 pt-3 border-t border-slate-100">
+                        <View className="flex-col flex-1 pl-1">
+                            <Text className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Tiền thu hộ (COD)</Text>
+                            <Text className="text-green-600 font-black text-[22px] leading-6">
+                                {order.codAmount?.toLocaleString() || '0'}<Text className="text-base font-bold text-green-600 ml-0.5 relative -top-0.5">đ</Text>
+                            </Text>
+                        </View>
+                        <View className="flex-row gap-2.5">
+                            {order.customer?.phone && (
                                 <TouchableOpacity
-                                    onPress={() => {
-                                        Linking.openURL(`tel:${order.customer.phone}`).catch(() => {
-                                            showError("Không thể mở ứng dụng gọi điện");
-                                        });
-                                    }}
-                                    className="bg-emerald-500 px-4 py-2.5 rounded-xl flex-row items-center shadow-sm active:bg-emerald-600"
+                                    onPress={() => Linking.openURL(`tel:${order.customer.phone}`)}
+                                    className="w-11 h-11 rounded-xl bg-emerald-50 items-center justify-center border border-emerald-100 shadow-sm shadow-emerald-100"
                                 >
-                                    <Ionicons name="call" size={16} color="white" />
-                                    <Text className="text-white text-sm font-black ml-1.5 uppercase tracking-wide">Gọi điện</Text>
+                                    <Ionicons name="call" size={20} color="#10B981" />
                                 </TouchableOpacity>
-                            ) : <View />}
-                            
+                            )}
                             <TouchableOpacity
                                 onPress={handleGetDirections}
-                                className="bg-blue-600 px-4 py-2.5 rounded-xl flex-row items-center shadow-sm active:bg-blue-700"
+                                className="w-11 h-11 rounded-xl bg-blue-50 items-center justify-center border border-blue-100 shadow-sm shadow-blue-100"
                             >
-                                <Ionicons name="navigate-outline" size={16} color="white" />
-                                <Text className="text-white text-sm font-black ml-1.5 uppercase tracking-wide">Chỉ đường</Text>
+                                <Ionicons name="navigate" size={20} color="#3B82F6" />
                             </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    <View className="flex-row items-center border-t border-slate-50 pt-3 mt-1">
-                        <View className="w-10 h-10 rounded-full bg-green-50 items-center justify-center mr-3">
-                            <Ionicons name="cash" size={22} color="#10B981" />
-                        </View>
-                        <View>
-                            <Text className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-0.5">Tiền thu hộ (COD)</Text>
-                            <Text className="text-green-600 font-black text-2xl">
-                                {order.codAmount?.toLocaleString() || '0'} 
-                                <Text className="text-sm font-bold ml-1">đ</Text>
-                            </Text>
                         </View>
                     </View>
                 </View>
 
-                <View className="flex-row gap-3">
+                {/* Bottom Action Bar */}
+                <View className="p-2.5 pt-1.5 pb-2.5 flex-row gap-2 bg-slate-50/50 rounded-b-2xl items-center mt-0.5 mb-0.5 mx-0.5">
                     {(order.status === 'pending' || order.status === 'assigned') && (isShipper || isSup) && (
                         <TouchableOpacity
                             onPress={handleStart}
                             disabled={!!loadingAction || runStatus !== 'in_progress'}
-                            className={clsx("flex-1 py-3.5 rounded-2xl items-center flex-row justify-center space-x-3 shadow-md",
-                                runStatus === 'in_progress' ? "bg-blue-600" : "bg-slate-300"
+                            className={clsx("flex-1 py-3 rounded-xl items-center flex-row justify-center",
+                                runStatus === 'in_progress' ? "bg-blue-600 shadow-sm shadow-blue-200" : "bg-slate-300"
                             )}
                         >
                             {loadingAction === 'start' ? (
                                 <ActivityIndicator size="small" color="#fff" />
                             ) : (
-                                <View className="flex-row items-center justify-center">
-                                    <Feather name={runStatus === 'in_progress' ? "play" : "lock"} size={16} color="#fff" />
-                                    <Text className="text-white font-black text-sm ml-2">BẮT ĐẦU GIAO</Text>
-                                </View>
+                                <>
+                                    <Feather name={runStatus === 'in_progress' ? "play" : "lock"} size={16} color={runStatus === 'in_progress' ? "#fff" : "#64748B"} />
+                                    <Text className={clsx("font-black text-sm ml-2", runStatus === 'in_progress' ? "text-white" : "text-slate-500")}>BẮT ĐẦU</Text>
+                                </>
                             )}
                         </TouchableOpacity>
                     )}
@@ -325,20 +343,20 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                                 <TouchableOpacity
                                     onPress={() => handleOpenModal('complete')}
                                     disabled={!!loadingAction}
-                                    className="flex-1 bg-green-600 py-4 rounded-2xl items-center flex-row justify-center shadow-lg active:bg-green-700"
+                                    className="flex-1 bg-emerald-500 py-3 rounded-xl items-center flex-row justify-center shadow-sm shadow-emerald-200"
                                 >
-                                    <Feather name="check-circle" size={20} color="#fff" />
-                                    <Text className="text-white font-black text-base ml-2">HOÀN TẤT</Text>
+                                    <Feather name="check-circle" size={16} color="#fff" />
+                                    <Text className="text-white font-black text-sm ml-2">HOÀN TẤT</Text>
                                 </TouchableOpacity>
                             )}
                             {isAdmin && (
                                 <TouchableOpacity
                                     onPress={() => handleOpenModal('cancel')}
                                     disabled={!!loadingAction}
-                                    className="flex-1 bg-red-50 py-4 rounded-2xl items-center flex-row justify-center border-2 border-red-100 active:bg-red-100"
+                                    className="flex-1 bg-white border border-red-200 py-2.5 rounded-xl items-center flex-row justify-center shadow-sm shadow-red-50"
                                 >
-                                    <Feather name="x-circle" size={20} color="#EF4444" />
-                                    <Text className="text-red-500 font-black text-base ml-2">HỦY ĐƠN</Text>
+                                    <Feather name="x-circle" size={16} color="#EF4444" />
+                                    <Text className="text-red-500 font-bold text-sm ml-2">HỦY ĐƠN</Text>
                                 </TouchableOpacity>
                             )}
                         </>
@@ -348,18 +366,25 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                         <TouchableOpacity
                             onPress={handleReopen}
                             disabled={!!loadingAction}
-                            className="flex-1 bg-slate-100 py-4 rounded-2xl items-center flex-row justify-center border-2 border-slate-200 active:bg-slate-200 shadow-sm"
+                            className="flex-1 bg-white border border-slate-200 py-2.5 rounded-xl items-center flex-row justify-center shadow-sm shadow-slate-50"
                         >
-                            <Feather name="rotate-ccw" size={20} color="#475569" />
-                            <Text className="text-slate-600 font-black text-sm ml-2">MỞ LẠI ĐƠN</Text>
+                            <Feather name="rotate-ccw" size={16} color="#475569" />
+                            <Text className="text-slate-700 font-bold text-sm ml-2">MỞ LẠI</Text>
                         </TouchableOpacity>
+                    )}
+                    
+                    {/* Placeholder when no actions are visible to keep the bar height consistent lightly */}
+                    {(order.status === 'completed') && (
+                        <View className="flex-1 py-1.5 items-center justify-center">
+                             <Text className="text-slate-400 font-bold text-xs">ĐÃ GIAO XONG</Text>
+                        </View>
                     )}
                 </View>
             </TouchableOpacity>
 
             {/* Action Modals */}
             <OrderActionModal
-                visible={modalVisible && runStatus === 'in_progress'}
+                visible={modalVisible}
                 type={modalType}
                 userRole={userRole}
                 order={order}
