@@ -37,7 +37,9 @@ const useDeliveryEvents = () => {
       const targetRunId = payload.runId || payload.run_id;
       
       // Nếu người dùng đang mở xem chi tiết chuyến giao hàng này, fetch lại
-      if (currentDetailsRunId && targetRunId && currentDetailsRunId === targetRunId) {
+      const idStr = currentDetailsRunId ? String(currentDetailsRunId) : null;
+      const targetIdStr = targetRunId ? String(targetRunId) : null;
+      if (idStr && targetIdStr && idStr === targetIdStr) {
          void dispatch(fetchDeliveryRunById(currentDetailsRunId));
       }
     };
@@ -69,10 +71,6 @@ const useDeliveryEvents = () => {
     // Tracking location
     socket.on('driver_location_changed', handleLocationChanged);
 
-    // Subscribe to current run tracking if viewing details
-    if (currentDetailsRunId) {
-      socket.emit('subscribe_tracking', { runId: currentDetailsRunId });
-    }
 
     return () => {
       socket.off('delivery_runs_created', handleCreated);
@@ -83,9 +81,6 @@ const useDeliveryEvents = () => {
       socket.off('delivery_run_orders_deleted', handleOrdersUpdated);
       socket.off('driver_location_changed', handleLocationChanged);
       
-      if (currentDetailsRunId) {
-        socket.emit('unsubscribe_tracking', { runId: currentDetailsRunId });
-      }
     };
   }, [dispatch, currentDetailsRunId]);
 };

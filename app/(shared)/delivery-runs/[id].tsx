@@ -18,7 +18,7 @@ import { StartTripModal } from '../../../components/delivery-runs/deliveryRunDet
 import { DeliveryRunActionButtons } from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunActionButtons';
 import { Divider } from 'react-native-paper';
 import { useLocationTracking } from '../../../hooks/useLocationTracking';
-import useDeliveryEvents from '../../../hooks/socket-events/useDeliveryEvents';
+
 
 export default function DeliveryRunDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,11 +34,8 @@ export default function DeliveryRunDetailScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
 
-    // Socket events
-    useDeliveryEvents();
-
     // Location Tracking setup
-    const { startTracking, stopTracking, forceUpdate } = useLocationTracking(id, run?.vehicle_type);
+    const { startTracking, stopTracking } = useLocationTracking(id, run?.vehicle_type);
 
     // Bottom Sheet setup
     const bottomSheetRef = useRef<BottomSheet>(null);

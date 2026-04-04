@@ -33,7 +33,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }: any) => {
             runId,
             lat: latitude,
             lng: longitude,
-            // @ts-ignore - we'll handle vehicle_type in the backend or on receiver side
             vehicle_type: vehicle_type || undefined,
             timestamp: new Date().toISOString()
           });

@@ -47,7 +47,15 @@ export const disconnectSocket = () => {
 /**
  * Gửi vị trí shipper lên server
  */
-export const emitShipperLocation = (data: { runId?: string | number, lat: number, lng: number }) => {
+export type ShipperLocationPayload = {
+  runId?: string | number;
+  lat: number;
+  lng: number;
+  vehicle_type?: string;
+  timestamp?: string;
+};
+
+export const emitShipperLocation = (data: ShipperLocationPayload) => {
   if (socket.connected) {
     socket.emit('shipper_location_update', data);
   } else {

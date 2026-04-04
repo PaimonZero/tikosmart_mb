@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -229,8 +229,12 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
             const wLat = parseFloat(warehouseLat);
             const wLng = parseFloat(warehouseLng);
             
-            // Only add if not too close to start point to avoid redundant points
-            if (points.length === 0 || Math.abs(points[0].latitude - wLat) > 0.0001) {
+            // Only add if not too close to start point to avoid redundant points (compare both lat and lng)
+            const isDifferentPoint = points.length === 0 || 
+                Math.abs(points[0].latitude - wLat) > 0.0001 || 
+                Math.abs(points[0].longitude - wLng) > 0.0001;
+
+            if (isDifferentPoint) {
                 points.push({ latitude: wLat, longitude: wLng });
             }
         }
@@ -247,7 +251,7 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
         });
 
         return points;
-    }, [run.routeGeometry, run.orders, run.startLat, run.startLng, run.warehouseLat]);
+    }, [run.routeGeometry, run.orders, run.startLat, run.startLng, run.warehouseLat, run.warehouseLng, run.warehouse]);
  
     // 1.5. Guide line from Shipper to the start of the official route
     const leaderLineCoords = useMemo(() => {
@@ -328,13 +332,15 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
             }
 
             if (coordsToFit.length > 0) {
-                // Give a small delay to ensure map is ready
-                setTimeout(() => {
+                // Give a small delay to ensure map is ready and cleanup to avoid jitter/memory leaks
+                const timeoutId = setTimeout(() => {
                     mapRef.current?.fitToCoordinates(coordsToFit, {
                         edgePadding: { top: 120, right: 60, bottom: 250, left: 60 },
                         animated: true,
                     });
                 }, 500);
+
+                return () => clearTimeout(timeoutId);
             }
         }
     }, [routeCoordinates, leaderLineCoords, shipperLocation, run.status]);
