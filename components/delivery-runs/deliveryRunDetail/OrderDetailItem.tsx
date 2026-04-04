@@ -244,10 +244,40 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                                 {order.customer?.address || "Không rõ địa chỉ"}
                             </Text>
                         </View>
-                        <View className="flex-row justify-end pb-1 pr-1 mt-2">
+
+                        <View className="flex-row items-start mt-2">
+                            <Ionicons name="call" size={18} color="#64748B"  />
+                            <Text className="text-slate-700 text-sm ml-2 flex-1 font-medium leading-5">
+                                {order.customer?.phone || "Không có số điện thoại"}
+                            </Text>
+                        </View>
+
+                        {!!order.customer?.note && (
+                            <View className="flex-row items-start mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-100">
+                                <Ionicons name="information-circle" size={18} color="#EAB308" />
+                                <Text className="text-yellow-800 text-sm ml-2 flex-1 font-medium leading-5">
+                                    {order.customer.note}
+                                </Text>
+                            </View>
+                        )}
+                        <View className="flex-row justify-between items-center pb-1 mt-3 w-full">
+                            {order.customer?.phone ? (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        Linking.openURL(`tel:${order.customer.phone}`).catch(() => {
+                                            showError("Không thể mở ứng dụng gọi điện");
+                                        });
+                                    }}
+                                    className="bg-emerald-500 px-4 py-2.5 rounded-xl flex-row items-center shadow-sm active:bg-emerald-600"
+                                >
+                                    <Ionicons name="call" size={16} color="white" />
+                                    <Text className="text-white text-sm font-black ml-1.5 uppercase tracking-wide">Gọi điện</Text>
+                                </TouchableOpacity>
+                            ) : <View />}
+                            
                             <TouchableOpacity
                                 onPress={handleGetDirections}
-                                className="bg-blue-600 px-4 py-2 rounded-xl flex-row items-center shadow-sm active:bg-blue-700"
+                                className="bg-blue-600 px-4 py-2.5 rounded-xl flex-row items-center shadow-sm active:bg-blue-700"
                             >
                                 <Ionicons name="navigate-outline" size={16} color="white" />
                                 <Text className="text-white text-sm font-black ml-1.5 uppercase tracking-wide">Chỉ đường</Text>

@@ -43,3 +43,22 @@ export const disconnectSocket = () => {
     socket.disconnect();
   }
 };
+
+/**
+ * Gửi vị trí shipper lên server
+ */
+export type ShipperLocationPayload = {
+  runId?: string | number;
+  lat: number;
+  lng: number;
+  vehicle_type?: string;
+  timestamp?: string;
+};
+
+export const emitShipperLocation = (data: ShipperLocationPayload) => {
+  if (socket.connected) {
+    socket.emit('shipper_location_update', data);
+  } else {
+    // console.warn('[Socket] Không thể gửi vị trí: Chưa kết nối socket.');
+  }
+};

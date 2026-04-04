@@ -11,7 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tikosmart cần truy cập vị trí của bạn để theo dõi hành trình giao hàng ngay cả khi ứng dụng chạy ngầm.",
+        "NSLocationAlwaysUsageDescription": "Tikosmart cần truy cập vị trí của bạn để theo dõi hành trình giao hàng ngay cả khi ứng dụng chạy ngầm.",
+        "NSLocationWhenInUseUsageDescription": "Tikosmart cần truy cập vị trí của bạn để theo dõi hành trình giao hàng.",
+        "UIBackgroundModes": ["location", "fetch"]
       }
     },
     "android": {
@@ -25,7 +29,12 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.vietcong221.tikosmart_mb",
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -35,6 +44,13 @@
     "plugins": [
       "expo-router",
       "./plugins/withAndroidSingleTask",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Cho phép Tikosmart theo dõi vị trí của bạn để tối ưu hóa lộ trình giao hàng.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
       [
         "expo-image-picker",
         {

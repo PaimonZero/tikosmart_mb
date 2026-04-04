@@ -28,6 +28,8 @@ import useSubscribeRooms from "@/hooks/useSubscribeRooms";
 import useProductEvents from "@/hooks/socket-events/useProductEvents";
 import usePreparationEvents from "@/hooks/socket-events/usePreparationEvents";
 import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
+import useDeliveryEvents from "@/hooks/socket-events/useDeliveryEvents";
+import "@/utils/locationTask";
 
 export const unstable_settings = {};
 
@@ -50,13 +52,15 @@ function RootLayoutInner() {
   useProductEvents();
   usePreparationEvents();
   useFinanceAREvents();
+  useDeliveryEvents();
   
   // Subscribe to basic rooms
   useSubscribeRooms([
     'room:sales_orders', 
     'room:inventory', 
     'room:preparation', 
-    'room:finance_ar'
+    'room:finance_ar',
+    'room:deliveries'
   ]);
 
   // Connect/Disconnect socket based on auth state
