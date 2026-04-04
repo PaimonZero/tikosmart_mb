@@ -192,3 +192,16 @@ export const completeDeliveryOrder = async (
 export const failDeliveryOrder = async (id: string, note: string) => {
   return apiClient.patch(`/delivery-run-orders/${id}/fail`, { note });
 };
+
+/**
+ * [POST] /api/delivery-runs/:id/recalculate
+ * Dynamic route recalculation mid-run (warehouse-aware)
+ * Body: new_start_lat, new_start_lng
+ * Access: sup_shipper, shipper
+ */
+export const recalculateDeliveryRoute = async (
+  id: string,
+  data: { new_start_lat: number; new_start_lng: number }
+) => {
+  return apiClient.post(`/delivery-runs/${id}/recalculate`, data);
+};
