@@ -1,5 +1,5 @@
-import { Redirect } from "expo-router";
 import { useAppSelector } from "@/store/hooks";
+import { Redirect } from "expo-router";
 
 export default function Index() {
     const { isAuthenticated, user, hasHydrated, hasFetchedProfile } = useAppSelector((s) => s.auth);
@@ -9,7 +9,7 @@ export default function Index() {
     }
 
     if (!isAuthenticated) {
-        return <Redirect href="/(auth)/login" />;
+        return <Redirect href="/login" />;
     }
 
     if (!hasFetchedProfile) {
