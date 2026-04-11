@@ -1,5 +1,8 @@
 import { getListSalesOrders } from "@/services/salesOrdersService";
-import { useCallback, useRef, useState } from "react";
+import { socket } from "@/utils/socketManager";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const ORDER_STATUS_LIST = ["pending_preparation", "assigned_preparation"];
 
 const PAGE_LIMIT = 15;
 
@@ -47,7 +50,7 @@ export const useOrderList = () => {
 
     try {
       const res = await getListSalesOrders({
-        status: ["pending_preparation", "assigned_preparation"],
+        status: ORDER_STATUS_LIST,
         q: q || undefined,
         limit: PAGE_LIMIT,
         offset,
@@ -115,6 +118,74 @@ export const useOrderList = () => {
     await fetchOrders(searchRef.current, false);
     setRefreshing(false);
   }, [fetchOrders]);
+
+  // Realtime logic
+  useEffect(() => {
+    const isValidOrder = (order: SalesOrder) => {
+      const hasStatus = ORDER_STATUS_LIST.includes(order.status);
+      const hasRemaining = order.items?.some((i: OrderItem) => i.remain > 0);
+      
+      // Nếu có search keyword, kiểm tra xem orderNo hoặc customerName có khớp ko (case-insensitive)
+      if (searchRef.current) {
+        const q = searchRef.current.toLowerCase();
+        const matchesOrderNo = order.orderNo?.toLowerCase().includes(q);
+        const matchesCustomer = order.customerName?.toLowerCase().includes(q);
+        if (!matchesOrderNo && !matchesCustomer) return false;
+      }
+
+      return hasStatus && !!hasRemaining;
+    };
+
+    const handleCreated = (newOrder: SalesOrder) => {
+      if (isValidOrder(newOrder)) {
+        setOrders((prev) => {
+          // Tránh lặp
+          if (prev.some((o) => o.id === newOrder.id)) return prev;
+          return [newOrder, ...prev];
+        });
+      }
+    };
+
+    const handleUpdated = (updatedOrder: SalesOrder) => {
+      setOrders((prev) => {
+        const index = prev.findIndex((o) => o.id === updatedOrder.id);
+        
+        if (index !== -1) {
+          // Gộp dữ liệu cũ và mới để tránh mất thông tin khi nhận partial update
+          const merged = { ...prev[index], ...updatedOrder };
+          const valid = isValidOrder(merged);
+
+          if (valid) {
+            const next = [...prev];
+            next[index] = merged;
+            return next;
+          } else {
+            return prev.filter((o) => o.id !== updatedOrder.id);
+          }
+        } else {
+          // Nếu chưa có trong danh sách hiện tại nhưng sau khi update lại hợp lệ
+          if (isValidOrder(updatedOrder)) {
+            return [updatedOrder, ...prev];
+          }
+        }
+        return prev;
+      });
+    };
+
+    const handleDeleted = ({ id }: { id: string }) => {
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+    };
+
+    socket.on("sales_orders_created", handleCreated);
+    socket.on("sales_orders_updated", handleUpdated);
+    socket.on("sales_orders_deleted", handleDeleted);
+
+    return () => {
+      socket.off("sales_orders_created", handleCreated);
+      socket.off("sales_orders_updated", handleUpdated);
+      socket.off("sales_orders_deleted", handleDeleted);
+    };
+  }, []); // [] vì searchRef là ref, setOrders ổn định
 
   return {
     orders,

@@ -8,7 +8,6 @@ interface OverdueSlaConfirmModalProps {
   visible: boolean;
   order: SalesOrder | null;
   onClose: () => void;
-  onContinueCreateTask: () => void;
   onCreateIssue: () => void;
 }
 
@@ -16,7 +15,6 @@ const OverdueSlaConfirmModal = ({
   visible,
   order,
   onClose,
-  onContinueCreateTask,
   onCreateIssue,
 }: OverdueSlaConfirmModalProps) => {
   return (
@@ -26,36 +24,66 @@ const OverdueSlaConfirmModal = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/35 items-center justify-center px-4">
-        <View className="w-full max-w-[520px] bg-white rounded-xl p-4">
-          <View className="flex-row items-center">
-            <AlertTriangle size={20} color="#D97706" />
-            <Text className="ml-2 text-lg font-bold text-gray-900">Đơn hàng đã quá hạn SLA</Text>
-          </View>
-          <Text className="text-gray-700 mt-3 leading-6">
-            Đơn hàng <Text className="font-semibold">{order?.orderNo || '-'}</Text> đã quá hạn giao hàng
-            {order?.slaDeliveryAt
-              ? ` (SLA: ${dayjs(order.slaDeliveryAt).format('DD/MM/YYYY HH:mm')}).`
-              : '.'}
-          </Text>
-          <Text className="text-gray-700 mt-2 leading-6">
-            Bạn muốn tạo issue để admin cập nhật SLA mới hay tiếp tục tạo nhiệm vụ?
-          </Text>
+      <View className="flex-1 bg-black/40 items-center justify-center px-6">
+        <View className="w-full max-w-[400px] bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Header Accent */}
+          <View className="h-1.5 bg-amber-500" />
+          
+          <View className="p-6">
+            {/* Icon & Title Group */}
+            <View className="items-center mb-5">
+              <View className="w-16 h-16 bg-amber-50 rounded-full items-center justify-center mb-4">
+                <AlertTriangle size={32} color="#D97706" />
+              </View>
+              <Text className="text-xl font-bold text-slate-900 text-center">
+                Đơn hàng quá hạn SLA
+              </Text>
+            </View>
 
-          <View className="mt-5 flex-row justify-end gap-2">
-            <TouchableOpacity
-              onPress={onContinueCreateTask}
-              className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white"
-            >
-              <Text className="text-gray-700 font-medium">Tiếp tục tạo nhiệm vụ</Text>
-            </TouchableOpacity>
+            {/* Content Body */}
+            <View className="space-y-3">
+              <Text className="text-slate-600 text-center leading-relaxed">
+                Đơn hàng <Text className="font-bold text-slate-900">{order?.orderNo || '-'}</Text> đã quá hạn giao hàng dự kiến.
+              </Text>
+              
+              {order?.slaDeliveryAt && (
+                <View className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-2">
+                  <Text className="text-slate-500 text-xs text-center uppercase tracking-wider font-semibold mb-1">
+                    Thời hạn SLA gốc
+                  </Text>
+                  <Text className="text-slate-900 font-bold text-center text-base">
+                    {dayjs(order.slaDeliveryAt).format('HH:mm - DD/MM/YYYY')}
+                  </Text>
+                </View>
+              )}
 
-            <TouchableOpacity
-              onPress={onCreateIssue}
-              className="px-4 py-2.5 rounded-lg bg-blue-600"
-            >
-              <Text className="text-white font-semibold">Tạo issue cho Admin</Text>
-            </TouchableOpacity>
+              <Text className="text-slate-500 text-center text-sm mt-4 italic">
+                Bạn vui lòng tạo Issue để Admin cập nhật lại thời gian SLA mới.
+              </Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View className="mt-8 flex-col gap-3">
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={onCreateIssue}
+                className="w-full py-4 bg-blue-600 rounded-xl shadow-sm shadow-blue-200"
+              >
+                <Text className="text-white font-bold text-center text-base">
+                  Tạo issue cho Admin
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={onClose}
+                className="w-full py-3.5 bg-white border border-slate-200 rounded-xl"
+              >
+                <Text className="text-slate-600 font-semibold text-center">
+                  Hủy và quay lại
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>

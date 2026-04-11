@@ -88,11 +88,7 @@ export default function AddTaskScreen() {
         );
     }, [loading, orders.length]);
 
-    const handleContinueCreateTask = useCallback(() => {
-        if (!overdueOrder) return;
-        setConfirmVisible(false);
-        navigateToAddTaskForm(overdueOrder);
-    }, [navigateToAddTaskForm, overdueOrder]);
+
 
     const handleCreateIssue = useCallback(() => {
         if (!overdueOrder) return;
@@ -145,7 +141,6 @@ export default function AddTaskScreen() {
                     setConfirmVisible(false);
                     setOverdueOrder(null);
                 }}
-                onContinueCreateTask={handleContinueCreateTask}
                 onCreateIssue={handleCreateIssue}
             />
         </SafeAreaView>
