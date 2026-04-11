@@ -17,6 +17,7 @@ export interface SalesOrder {
   customerName: string;
   departmentName: string;
   departmentId: string;
+  slaDeliveryAt?: string;
   note?: string;
   items: OrderItem[];
   [key: string]: any;

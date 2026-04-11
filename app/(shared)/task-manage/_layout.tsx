@@ -36,6 +36,12 @@ export default function TaskManageLayout() {
                     title: "Tạo nhiệm vụ",
                 }}
             />
+            <Stack.Screen
+                name="sla-issue"
+                options={{
+                    title: "Tạo issue SLA",
+                }}
+            />
         </Stack>
     );
 }

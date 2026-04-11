@@ -1,8 +1,10 @@
 import AddTaskHeader from '@/components/task-manage/AddTask/AddTaskHeader';
 import EmptyOrderList from '@/components/task-manage/AddTask/EmptyOrderList';
 import OrderCard from '@/components/task-manage/AddTask/OrderCard';
+import OverdueSlaConfirmModal from '@/components/task-manage/AddTask/OverdueSlaConfirmModal';
 import { SalesOrder, useOrderList } from '@/hooks/useOrderList';
 import { useTaskRouteGuard } from '@/hooks/useTaskPermission';
+import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -21,6 +23,8 @@ export default function AddTaskScreen() {
     const { orders, loading, refreshing, hasMore, loadInitial, loadMore, search, refresh } = useOrderList();
 
     const [keyword, setKeyword] = useState('');
+    const [overdueOrder, setOverdueOrder] = useState<SalesOrder | null>(null);
+    const [confirmVisible, setConfirmVisible] = useState(false);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     useEffect(() => {
@@ -38,7 +42,7 @@ export default function AddTaskScreen() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [keyword]); // Chỉ trigger khi keyword thay đổi
 
-    const handleSelectOrder = useCallback((order: SalesOrder) => {
+    const navigateToAddTaskForm = useCallback((order: SalesOrder) => {
         router.push({
             pathname: '/(shared)/task-manage/add-task-form',
             params: {
@@ -53,6 +57,18 @@ export default function AddTaskScreen() {
             },
         } as any);
     }, [router]);
+
+    const handleSelectOrder = useCallback((order: SalesOrder) => {
+        const isOverdueSla = !!order.slaDeliveryAt && dayjs().isAfter(dayjs(order.slaDeliveryAt));
+
+        if (isOverdueSla) {
+            setOverdueOrder(order);
+            setConfirmVisible(true);
+            return;
+        }
+
+        navigateToAddTaskForm(order);
+    }, [navigateToAddTaskForm]);
 
     const handleEndReached = useCallback(() => {
         if (hasMore && !loading) loadMore();
@@ -71,6 +87,27 @@ export default function AddTaskScreen() {
             </View>
         );
     }, [loading, orders.length]);
+
+    const handleContinueCreateTask = useCallback(() => {
+        if (!overdueOrder) return;
+        setConfirmVisible(false);
+        navigateToAddTaskForm(overdueOrder);
+    }, [navigateToAddTaskForm, overdueOrder]);
+
+    const handleCreateIssue = useCallback(() => {
+        if (!overdueOrder) return;
+        setConfirmVisible(false);
+        router.push({
+            pathname: '/(shared)/task-manage/sla-issue',
+            params: {
+                orderId: overdueOrder.id,
+                orderNo: overdueOrder.orderNo,
+                customerName: overdueOrder.customerName || '',
+                departmentName: overdueOrder.departmentName || '',
+                slaDeliveryAt: overdueOrder.slaDeliveryAt || '',
+            },
+        } as any);
+    }, [overdueOrder, router]);
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'bottom']}>
@@ -100,6 +137,17 @@ export default function AddTaskScreen() {
                     ListEmptyComponent={<EmptyOrderList onRefresh={refresh} />}
                 />
             )}
+
+            <OverdueSlaConfirmModal
+                visible={confirmVisible}
+                order={overdueOrder}
+                onClose={() => {
+                    setConfirmVisible(false);
+                    setOverdueOrder(null);
+                }}
+                onContinueCreateTask={handleContinueCreateTask}
+                onCreateIssue={handleCreateIssue}
+            />
         </SafeAreaView>
     );
 }
