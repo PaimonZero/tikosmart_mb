@@ -219,8 +219,11 @@ const notificationsSlice = createSlice({
         const notif = state.notifications.data.find(
           (n) => n.id === action.payload,
         );
-        if (notif) {
+        if (notif && notif.status === "unread") {
           notif.status = "read";
+          if (state.notifications.pagination.unreadCount && state.notifications.pagination.unreadCount > 0) {
+            state.notifications.pagination.unreadCount -= 1;
+          }
         }
       })
       .addCase(markNotificationAsRead.rejected, (state, action) => {
@@ -238,6 +241,9 @@ const notificationsSlice = createSlice({
         state.notifications.data.forEach((notif) => {
           notif.status = "read";
         });
+        if (state.notifications.pagination) {
+          state.notifications.pagination.unreadCount = 0;
+        }
       })
       .addCase(markAllNotificationsAsRead.rejected, (state, action) => {
         state.markAllAsReadStatus = "failed";

@@ -3,6 +3,7 @@ import { setAuthExpiredHandler } from "@/services/authSession";
 import { fetchCurrentUser, hydrateAuth, logout } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { store } from "@/store/store";
+import { fetchNotifications } from "@/store/notificationSlice";
 import {
   DarkTheme,
   DefaultTheme,
@@ -85,6 +86,11 @@ function RootLayoutInner() {
   useEffect(() => {
     if (hasHydrated && isAuthenticated && !hasFetchedProfile) {
       void dispatch(fetchCurrentUser());
+    }
+    
+    // Fetch initial notifications for the badge count
+    if (hasHydrated && isAuthenticated && hasFetchedProfile) {
+      dispatch(fetchNotifications({ limit: 15, offset: 0 }));
     }
   }, [hasHydrated, isAuthenticated, hasFetchedProfile, dispatch]);
 
