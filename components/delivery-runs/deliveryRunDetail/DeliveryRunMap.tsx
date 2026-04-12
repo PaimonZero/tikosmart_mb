@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSelector } from 'react-redux';
@@ -85,7 +85,6 @@ const CustomMarkerWrapper = React.memo(({ marker }: { marker: any }) => {
 
 const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { latitude: number, longitude: number }, vehicleType?: string }) => {
     const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
-    const pulseAnim = useRef(new Animated.Value(1)).current;
 
     React.useEffect(() => {
         setTracksViewChanges(true);
@@ -93,55 +92,16 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
         return () => clearTimeout(timer);
     }, [coordinate.latitude, coordinate.longitude, vehicleType]);
 
-    // Pulsing effect
-    React.useEffect(() => {
-        const pulse = Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.5,
-                    duration: 1500,
-                    easing: Easing.out(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 0,
-                    useNativeDriver: true,
-                }),
-            ])
-        );
-        pulse.start();
-        return () => pulse.stop();
-    }, []);
-
-    const opacity = pulseAnim.interpolate({
-        inputRange: [1, 1.5],
-        outputRange: [0.6, 0]
-    });
-
     return (
-        <Marker 
-            coordinate={coordinate} 
-            anchor={{ x: 0.5, y: 0.5 }} 
+        <Marker
+            coordinate={coordinate}
+            anchor={{ x: 0.5, y: 0.5 }}
             zIndex={2000}
             tracksViewChanges={tracksViewChanges}
             title="Vị trí của bạn"
         >
             <View className="items-center justify-center">
-                {/* Pulsing Circle */}
-                <Animated.View 
-                    style={{
-                        position: 'absolute',
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: '#3B82F6',
-                        transform: [{ scale: pulseAnim }],
-                        opacity: opacity,
-                    }}
-                />
-                
-                <View 
+                <View
                     style={{
                         backgroundColor: '#3B82F6',
                         width: 38,
@@ -159,7 +119,7 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
                 >
                     <Truck size={22} color="white" />
                 </View>
-                <View 
+                <View
                     style={{
                         width: 0,
                         height: 0,
@@ -193,6 +153,21 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
         left: 16
     }), [insets.top, insets.bottom, height]);
 
+    const handleCenterLocation = () => {
+        if (shipperLocation && shipperLocation.lat && shipperLocation.lng && shipperLocation.lat !== 0 && shipperLocation.lng !== 0) {
+            mapRef.current?.animateToRegion({
+                latitude: parseFloat(shipperLocation.lat as any),
+                longitude: parseFloat(shipperLocation.lng as any),
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+            }, 1000);
+        } else {
+            // Fallback to user device's location if shipper position isn't available yet or tracking is not initialized
+            // Note: This relies on native my-location if bounds are known, but React Native Maps requires position logic
+            // Since we have user tracking, shipperLocation should mostly be valid.
+        }
+    };
+
     // 1. Parse route coordinates from GeoJSON or fallback to straight lines
     const routeCoordinates = useMemo(() => {
         // First try to parse run.routeGeometry
@@ -222,11 +197,11 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 console.error('[DeliveryRunMap] Failed to parse route geometry:', e);
             }
         }
-        
+
 
         // Fallback: Create straight lines between points if routeGeometry is missing/invalid
         const points = [];
-        
+
         // 1. Start from defined start position
         if (run.startLat && run.startLng) {
             points.push({ latitude: parseFloat(run.startLat), longitude: parseFloat(run.startLng) });
@@ -238,10 +213,10 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
         if (warehouseLat && warehouseLng) {
             const wLat = parseFloat(warehouseLat);
             const wLng = parseFloat(warehouseLng);
-            
+
             // Only add if not too close to start point to avoid redundant points (compare both lat and lng)
-            const isDifferentPoint = points.length === 0 || 
-                Math.abs(points[0].latitude - wLat) > 0.0001 || 
+            const isDifferentPoint = points.length === 0 ||
+                Math.abs(points[0].latitude - wLat) > 0.0001 ||
                 Math.abs(points[0].longitude - wLng) > 0.0001;
 
             if (isDifferentPoint) {
@@ -262,7 +237,7 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
 
         return points;
     }, [run.routeGeometry, run.orders, run.startLat, run.startLng, run.warehouseLat, run.warehouseLng, run.warehouse]);
- 
+
     // 1.5. Guide line from Shipper to the start of the official route
     const leaderLineCoords = useMemo(() => {
         if (!shipperLocation || run.status === 'completed' || routeCoordinates.length === 0) return null;
@@ -332,12 +307,12 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
     useEffect(() => {
         if (mapRef.current) {
             const coordsToFit = [...routeCoordinates];
-            
+
             // Add shipper location to fit
             if (shipperLocation && run.status !== 'completed') {
-                coordsToFit.push({ 
-                    latitude: parseFloat(shipperLocation.lat as any), 
-                    longitude: parseFloat(shipperLocation.lng as any) 
+                coordsToFit.push({
+                    latitude: parseFloat(shipperLocation.lat as any),
+                    longitude: parseFloat(shipperLocation.lng as any)
                 });
             }
 
@@ -372,7 +347,7 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 provider={PROVIDER_GOOGLE}
                 style={StyleSheet.absoluteFillObject}
                 mapPadding={mapPadding}
-                showsUserLocation={true}
+                // showsUserLocation={true}
                 // showsMyLocationButton={true}
                 showsCompass={true}
                 toolbarEnabled={false}
@@ -404,17 +379,30 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 ))}
 
                 {/* Shipper Marker — only visible for in_progress runs with valid coords */}
-                {shipperLocation && run.status === 'in_progress' && 
-                 shipperLocation.lat !== 0 && shipperLocation.lng !== 0 && (
-                    <ShipperMarker 
-                        coordinate={{ 
-                            latitude: parseFloat(shipperLocation.lat as any), 
-                            longitude: parseFloat(shipperLocation.lng as any) 
-                        }}
-                        vehicleType={shipperLocation.vehicle_type}
-                    />
-                )}
+                {shipperLocation && run.status === 'in_progress' &&
+                    shipperLocation.lat !== 0 && shipperLocation.lng !== 0 && (
+                        <ShipperMarker
+                            coordinate={{
+                                latitude: parseFloat(shipperLocation.lat as any),
+                                longitude: parseFloat(shipperLocation.lng as any)
+                            }}
+                            vehicleType={shipperLocation.vehicle_type}
+                        />
+                    )}
             </MapView>
+
+            <TouchableOpacity
+                className="absolute bg-white rounded-full items-center justify-center border border-slate-200"
+                style={{
+                    width: 45,
+                    height: 45,
+                    right: 12,
+                    bottom: mapPadding.bottom, // Use computed padding to stay exactly above the bottom sheet
+                }}
+                onPress={handleCenterLocation}
+            >
+                <Ionicons name="locate" size={25} color="black" />
+            </TouchableOpacity>
         </View>
     );
 }
