@@ -1,5 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
+import dayjs from "dayjs";
 import React, { useCallback, useRef, useState } from "react";
 import {
     Alert,
@@ -173,7 +174,9 @@ export default function TaskDetailScreen() {
                         Mã nhiệm vụ:
                     </Text>
                     <View className="bg-blue-100 px-1.5 py-1 rounded ml-2 flex-shrink-0">
-                        <Text className="text-sm font-bold text-blue-600">#{taskData.id?.slice(0, 8) || "Không rõ"}</Text>
+                        <Text className="text-sm font-bold text-blue-600">
+                            #{taskData.dailySeq || '?'}{taskData.createdAt ? ` - ${dayjs(taskData.createdAt).format('DD/MM/YYYY')}` : ''}
+                        </Text>
                     </View>
                 </View>
                 <View className="ml-2 flex-row items-center gap-2">
