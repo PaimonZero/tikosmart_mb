@@ -18,7 +18,14 @@ const FOREGROUND_RAW_DISTANCE = 10; // OS-level raw feed interval (meters) — t
  * Haversine: Tính khoảng cách (mét) giữa 2 tọa độ GPS.
  */
 function getDistanceInMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+  if (
+    !Number.isFinite(lat1) ||
+    !Number.isFinite(lng1) ||
+    !Number.isFinite(lat2) ||
+    !Number.isFinite(lng2)
+  ) {
+    return 0;
+  }
   const R = 6371e3;
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
@@ -88,23 +95,25 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
       }
 
       // 4. Start Background Tracking (handles app minimized/killed — emits via socket only)
-      const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-      if (isTaskRunning) {
-        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-      }
+      if (bgStatus === 'granted') {
+        const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+        if (isTaskRunning) {
+          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        }
 
-      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.Balanced,
-        distanceInterval: TRACKING_DISTANCE_INTERVAL,
-        deferredUpdatesInterval: TRACKING_DEFERRED_UPDATES_INTERVAL,
-        deferredUpdatesDistance: TRACKING_DEFERRED_UPDATES_DISTANCE,
-        foregroundService: {
-          notificationTitle: 'Đang theo dõi vị trí giao hàng',
-          notificationBody: 'Tikosmart đang cập nhật vị trí của bạn để đảm bảo lộ trình chính xác.',
-          notificationColor: '#3B82F6',
-        },
-        pausesUpdatesAutomatically: true,
-      });
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.Balanced,
+          distanceInterval: TRACKING_DISTANCE_INTERVAL,
+          deferredUpdatesInterval: TRACKING_DEFERRED_UPDATES_INTERVAL,
+          deferredUpdatesDistance: TRACKING_DEFERRED_UPDATES_DISTANCE,
+          foregroundService: {
+            notificationTitle: 'Đang theo dõi vị trí giao hàng',
+            notificationBody: 'Tikosmart đang cập nhật vị trí của bạn để đảm bảo lộ trình chính xác.',
+            notificationColor: '#3B82F6',
+          },
+          pausesUpdatesAutomatically: true,
+        });
+      }
 
       // 5. Start Foreground Watcher with Smart Throttle
       //    OS fires raw updates every ~10m, then our JS logic decides whether to emit.

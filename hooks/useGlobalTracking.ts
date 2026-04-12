@@ -28,7 +28,14 @@ function getDistanceInMeters(
   lat2: number,
   lng2: number,
 ): number {
-  if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+  if (
+    !Number.isFinite(lat1) ||
+    !Number.isFinite(lng1) ||
+    !Number.isFinite(lat2) ||
+    !Number.isFinite(lng2)
+  ) {
+    return 0;
+  }
   const R = 6371e3;
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
@@ -133,7 +140,7 @@ const useGlobalTracking = () => {
           return;
         }
 
-        await Location.requestBackgroundPermissionsAsync();
+        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
 
         // Store metadata for background task
         await setActiveRunId(runId);
@@ -143,23 +150,27 @@ const useGlobalTracking = () => {
         lastEmitRef.current = { time: 0, lat: null, lng: null };
 
         // ── Background Task (app killed/minimized — socket emit only) ──
-        const isTaskRunning =
-          await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-        if (isTaskRunning)
-          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        if (bgStatus === "granted") {
+          const isTaskRunning =
+            await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+          if (isTaskRunning)
+            await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
 
-        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.Balanced,
-          distanceInterval: TRACKING_DISTANCE_INTERVAL,
-          deferredUpdatesInterval: TRACKING_DEFERRED_UPDATES_INTERVAL,
-          deferredUpdatesDistance: TRACKING_DEFERRED_UPDATES_DISTANCE,
-          foregroundService: {
-            notificationTitle: "Đang theo dõi vị trí giao hàng",
-            notificationBody: "Tikosmart đang cập nhật vị trí của bạn.",
-            notificationColor: "#3B82F6",
-          },
-          pausesUpdatesAutomatically: true,
-        });
+          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: TRACKING_DISTANCE_INTERVAL,
+            deferredUpdatesInterval: TRACKING_DEFERRED_UPDATES_INTERVAL,
+            deferredUpdatesDistance: TRACKING_DEFERRED_UPDATES_DISTANCE,
+            foregroundService: {
+              notificationTitle: "Đang theo dõi vị trí giao hàng",
+              notificationBody: "Tikosmart đang cập nhật vị trí của bạn.",
+              notificationColor: "#3B82F6",
+            },
+            pausesUpdatesAutomatically: true,
+          });
+        } else {
+          console.warn("[GlobalTracking] Background permission denied, skipping background task");
+        }
 
         // ── Foreground Watcher (instant local Redux + socket emit) ──
         if (foregroundSubRef.current) {
@@ -195,7 +206,7 @@ const useGlobalTracking = () => {
 
             if (shouldEmit) {
               const data = {
-                runId: activeRunIdRef.current,
+                runId,
                 lat: latitude,
                 lng: longitude,
                 vehicle_type: activeVehicleRef.current,

@@ -365,12 +365,17 @@ const deliveryRunsSlice = createSlice({
       }
     },
     updateShipperLocation: (state, action) => {
-       state.shipperLocation = {
-          lat: action.payload.lat,
-          lng: action.payload.lng,
-          lastUpdate: action.payload.timestamp || new Date().toISOString(),
-          vehicle_type: action.payload.vehicle_type || (state.deliveryRunById as any)?.vehicle_type
-       };
+       const lat = Number(action.payload.lat);
+       const lng = Number(action.payload.lng);
+       
+       if (Number.isFinite(lat) && Number.isFinite(lng)) {
+         state.shipperLocation = {
+            lat,
+            lng,
+            lastUpdate: action.payload.timestamp || new Date().toISOString(),
+            vehicle_type: action.payload.vehicle_type || (state.deliveryRunById as any)?.vehicle_type
+         };
+       }
     },
     clearShipperLocation: (state) => {
        state.shipperLocation = null;
