@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { CalendarDays, Clock, Flag as FlagIcon, HelpCircle, LucideProps } from 'lucide-react-native';
+import { CalendarDays, Clock, Flag as FlagIcon, HelpCircle } from 'lucide-react-native';
 import { Dayjs } from 'dayjs';
 
 interface SlaIssuePlanProps {

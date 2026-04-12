@@ -41,13 +41,13 @@ export default function SlaIssueScreen() {
     orderId,
     orderNo,
     customerName,
-    departmentName,
+
     slaDeliveryAt,
   } = useLocalSearchParams<{
     orderId: string;
     orderNo: string;
     customerName: string;
-    departmentName: string;
+
     slaDeliveryAt: string;
   }>();
 
