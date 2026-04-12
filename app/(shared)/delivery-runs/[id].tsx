@@ -6,18 +6,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, LayoutAnimation, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDeliveryRunById } from '../../../store/deliveryRunsSlice';
+import { fetchDeliveryRunById, startDeliveryRun, completeDeliveryRun, cancelDeliveryRun, clearShipperLocation } from '../../../store/deliveryRunsSlice';
 
 import DeliveryRunMap from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunMap';
 import FloatingRunInfoCard from '../../../components/delivery-runs/deliveryRunDetail/FloatingRunInfoCard';
 import OrderDetailItem from '../../../components/delivery-runs/deliveryRunDetail/OrderDetailItem';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import * as Location from 'expo-location';
-import { startDeliveryRun, completeDeliveryRun, cancelDeliveryRun } from '../../../store/deliveryRunsSlice';
 import { StartTripModal } from '../../../components/delivery-runs/deliveryRunDetail/StartTripModal';
 import { DeliveryRunActionButtons } from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunActionButtons';
 import { Divider } from 'react-native-paper';
-import { useLocationTracking } from '../../../hooks/useLocationTracking';
+import { socket } from '../../../utils/socketManager';
 
 
 export default function DeliveryRunDetailScreen() {
@@ -33,9 +32,6 @@ export default function DeliveryRunDetailScreen() {
     const error = fetchError;
     const [refreshing, setRefreshing] = useState(false);
     const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
-
-    // Location Tracking setup
-    const { startTracking, stopTracking } = useLocationTracking(id, run?.vehicle_type);
 
     // Bottom Sheet setup
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -68,29 +64,37 @@ export default function DeliveryRunDetailScreen() {
         if (id) {
             dispatch(fetchDeliveryRunById(id));
         }
+
+        // Clear stale shipper location when entering a new detail screen
+        // (prevents ghost marker from a previous run appearing briefly)
+        dispatch(clearShipperLocation());
+
+        return () => {
+            // Clear shipper location when leaving the detail screen
+            dispatch(clearShipperLocation());
+        };
     }, [id, dispatch]);
 
-    // Manage tracking lifecycle
+    // Socket subscription for tracking (Crucial for Admin viewing on Mobile)
     useEffect(() => {
-        const initTracking = async () => {
-            if (isShipper && run?.status === 'in_progress' && id) {
-                try {
-                    await startTracking();
-                } catch (err: any) {
-                    // Hiển thị lỗi ra UI nếu tracking thất bại khi vào màn hình
-                    showError(err.message || "Không thể khởi động theo dõi vị trí");
-                }
-            } else {
-                stopTracking();
+        if (!id || run?.status !== 'in_progress') return;
+
+        const handleSubscribe = () => {
+            if (socket.connected) {
+                socket.emit('subscribe_tracking', { runId: id });
             }
         };
 
-        initTracking();
+        handleSubscribe();
+        socket.on('connect', handleSubscribe);
 
         return () => {
-            stopTracking();
+            if (socket.connected) {
+                socket.emit('unsubscribe_tracking', { runId: id });
+            }
+            socket.off('connect', handleSubscribe);
         };
-    }, [run?.status, id, isShipper, startTracking, stopTracking]);
+    }, [id, run?.status]);
 
     const showAlert = (title: string, content: string, isDanger = false) => {
         setDialogConfig({ title, content, isDanger, showCancel: false, onConfirm: () => setDialogVisible(false) });
@@ -158,13 +162,8 @@ export default function DeliveryRunDetailScreen() {
 
             setStartModalVisible(false);
             
-            // 3. Start tracking immediately
-            try {
-                await startTracking();
-            } catch (trackErr: any) {
-                console.warn("[StartTrip] Tracking start failed but trip is active:", trackErr);
-                showAlert("Cảnh báo", `Chuyến giao đã bắt đầu nhưng không thể theo dõi vị trí: ${trackErr.message}`);
-            }
+            // Tracking is now auto-managed by useGlobalTracking (root layout)
+            // The socket event 'delivery_runs_updated' will trigger checkAndSync
             
             onRefresh();
             showAlert("Thành công", "Chuyến giao hàng đã chính thức bắt đầu!");
@@ -183,7 +182,7 @@ export default function DeliveryRunDetailScreen() {
                 setDialogConfig(prev => ({ ...prev, isLoading: true }));
                 try {
                     await dispatch(completeDeliveryRun(id!)).unwrap();
-                    stopTracking(); // Stop tracking on completion
+                    // Tracking auto-stops via useGlobalTracking when status changes
                     setDialogVisible(false);
                     onRefresh();
                     showAlert("Chúc mừng", "Bạn đã hoàn thành chuyến giao hàng!");

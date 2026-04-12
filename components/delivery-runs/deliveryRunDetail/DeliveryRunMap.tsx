@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
@@ -182,6 +183,15 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
 export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
     const mapRef = useRef<MapView>(null);
     const shipperLocation = useSelector((state: RootState) => state.deliveryRuns.shipperLocation);
+    const insets = useSafeAreaInsets();
+    const { height } = useWindowDimensions();
+
+    const mapPadding = useMemo(() => ({
+        top: insets.top + 80, // Header space
+        right: 16,
+        bottom: height * 0.2 + insets.bottom + 20, // Bottom sheet 20% snap point
+        left: 16
+    }), [insets.top, insets.bottom, height]);
 
     // 1. Parse route coordinates from GeoJSON or fallback to straight lines
     const routeCoordinates = useMemo(() => {
@@ -335,7 +345,7 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 // Give a small delay to ensure map is ready and cleanup to avoid jitter/memory leaks
                 const timeoutId = setTimeout(() => {
                     mapRef.current?.fitToCoordinates(coordsToFit, {
-                        edgePadding: { top: 120, right: 60, bottom: 250, left: 60 },
+                        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
                         animated: true,
                     });
                 }, 500);
@@ -361,6 +371,11 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
                 style={StyleSheet.absoluteFillObject}
+                mapPadding={mapPadding}
+                showsUserLocation={true}
+                // showsMyLocationButton={true}
+                showsCompass={true}
+                toolbarEnabled={false}
             >
                 {/* Leader Line (Shipper to Route Start) */}
                 {leaderLineCoords && (
@@ -388,8 +403,9 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                     <CustomMarkerWrapper key={marker.id} marker={marker} />
                 ))}
 
-                {/* Shipper Marker */}
-                {shipperLocation && (
+                {/* Shipper Marker — only visible for in_progress runs with valid coords */}
+                {shipperLocation && run.status === 'in_progress' && 
+                 shipperLocation.lat !== 0 && shipperLocation.lng !== 0 && (
                     <ShipperMarker 
                         coordinate={{ 
                             latitude: parseFloat(shipperLocation.lat as any), 

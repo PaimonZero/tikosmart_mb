@@ -372,6 +372,9 @@ const deliveryRunsSlice = createSlice({
           vehicle_type: action.payload.vehicle_type || (state.deliveryRunById as any)?.vehicle_type
        };
     },
+    clearShipperLocation: (state) => {
+       state.shipperLocation = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -573,7 +576,8 @@ export const {
   addDeliveryRunRealtime,
   updateDeliveryRunRealtime,
   deleteDeliveryRunRealtime,
-  updateShipperLocation
+  updateShipperLocation,
+  clearShipperLocation
 } = deliveryRunsSlice.actions;
 
 export const deliveryRunsSelectors = deliveryRunsAdapter.getSelectors(
