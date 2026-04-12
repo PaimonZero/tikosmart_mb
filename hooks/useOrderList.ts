@@ -141,6 +141,7 @@ export const useOrderList = () => {
         setOrders((prev) => {
           // Tránh lặp
           if (prev.some((o) => o.id === newOrder.id)) return prev;
+          offsetRef.current += 1; // Đồng bộ offset khi thêm mới
           return [newOrder, ...prev];
         });
       }
@@ -160,11 +161,14 @@ export const useOrderList = () => {
             next[index] = merged;
             return next;
           } else {
+            // Đơn hàng không còn hợp lệ (ví dụ: đã soạn xong) -> xóa khỏi list
+            offsetRef.current = Math.max(0, offsetRef.current - 1);
             return prev.filter((o) => o.id !== updatedOrder.id);
           }
         } else {
           // Nếu chưa có trong danh sách hiện tại nhưng sau khi update lại hợp lệ
           if (isValidOrder(updatedOrder)) {
+            offsetRef.current += 1;
             return [updatedOrder, ...prev];
           }
         }
@@ -173,7 +177,14 @@ export const useOrderList = () => {
     };
 
     const handleDeleted = ({ id }: { id: string }) => {
-      setOrders((prev) => prev.filter((o) => o.id !== id));
+      setOrders((prev) => {
+        const filtered = prev.filter((o) => o.id !== id);
+        if (filtered.length < prev.length) {
+          // Nếu đơn hàng bị xóa nằm trong list hiện tại -> giảm offset
+          offsetRef.current = Math.max(0, offsetRef.current - 1);
+        }
+        return filtered;
+      });
     };
 
     socket.on("sales_orders_created", handleCreated);

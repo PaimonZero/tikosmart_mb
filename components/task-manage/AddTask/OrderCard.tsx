@@ -55,11 +55,13 @@ const OrderCard = ({ order, onSelect }: OrderCardProps) => {
                 {/* Footer: SLA & Action */}
                 <View className="pt-3 border-t border-slate-50 flex-row items-center justify-between">
                     <View className="flex-row items-center">
-                        <View className={`w-2 h-2 rounded-full mr-2 ${isOverdue ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                        <View className={`w-2 h-2 rounded-full mr-2 ${
+                            isOverdue ? 'bg-red-500 animate-pulse' : hasSla ? 'bg-green-500' : 'bg-slate-300'
+                        }`} />
                         <View>
                             <Text className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Hạn giao (SLA)</Text>
                             <Text className={`text-sm ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-700 font-medium'}`}>
-                                {hasSla ? dayjs(order.slaDeliveryAt).format('HH:mm - DD/MM/YYYY') : '—'}
+                                {hasSla ? dayjs(order.slaDeliveryAt).format('HH:mm - DD/MM/YYYY') : 'Chưa có SLA'}
                             </Text>
                         </View>
                     </View>
