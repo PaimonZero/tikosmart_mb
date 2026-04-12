@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { LOCATION_TASK_NAME } from '@/utils/locationTask';
 import { useDispatch } from 'react-redux';
 import { updateShipperLocation } from '../store/deliveryRunsSlice';
@@ -8,20 +8,57 @@ import { setActiveRunId, setActiveVehicleType } from '../utils/trackingPersisten
 import { AppDispatch } from '../store/store';
 
 // --- TRACKING CONFIGURATION ---
-const TRACKING_DISTANCE_INTERVAL = 30; // Kích hoạt tracking trên mỗi khoảng cách (meters)
-const TRACKING_DEFERRED_UPDATES_INTERVAL = 60 * 2 * 1000; // Thời gian cập nhật nền tối thiểu (ms)
-const TRACKING_DEFERRED_UPDATES_DISTANCE = 50; // Quãng đường cập nhật nền tối thiểu (meters)
+const TRACKING_DISTANCE_INTERVAL = 30; // Ngưỡng khoảng cách tiêu chuẩn (meters)
+const TRACKING_DEFERRED_UPDATES_INTERVAL = 60 * 2 * 1000; // Thời gian trễ tối thiểu (ms) — 2 phút
+const TRACKING_DEFERRED_UPDATES_DISTANCE = 50; // Ngưỡng nhảy vọt (meters) — bỏ qua giới hạn thời gian
+const FOREGROUND_RAW_DISTANCE = 10; // OS-level raw feed interval (meters) — thấp để JS throttle tự quyết
 // ------------------------------
 
 /**
- * Hook to manage location tracking for a delivery run
+ * Haversine: Tính khoảng cách (mét) giữa 2 tọa độ GPS.
+ */
+function getDistanceInMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+  const R = 6371e3;
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Hook to manage location tracking for a delivery run.
+ * 
+ * Uses a DUAL-PATH architecture:
+ * - Path 1 (Foreground Watcher): watchPositionAsync → Smart Throttle → Redux dispatch + socket emit
+ * - Path 2 (Background Task):    startLocationUpdatesAsync → socket emit only (app minimized/killed)
+ * 
+ * Smart Throttle Logic (consistent with Web version):
+ * - Scenario 0: First broadcast → send immediately
+ * - Scenario A: Slow movement   → send only if distance ≥ 30m AND time ≥ 2 minutes
+ * - Scenario B: High-speed jump  → send immediately if distance ≥ 50m (bypass time limit)
  */
 export const useLocationTracking = (runId: string | number | null, vehicle_type?: string) => {
   
   const dispatch = useDispatch<AppDispatch>();
+  const foregroundSubRef = useRef<Location.LocationSubscription | null>(null);
+
+  // Track last emitted state for smart throttle (mirrors Web's lastStateRef)
+  const lastEmitStateRef = useRef<{ time: number; lat: number | null; lng: number | null }>({
+    time: 0,
+    lat: null,
+    lng: null,
+  });
   
   const startTracking = useCallback(async () => {
     if (!runId) return;
+
+    // Reset throttle state for fresh tracking session
+    lastEmitStateRef.current = { time: 0, lat: null, lng: null };
 
     try {
       // 0. Check Location Services
@@ -50,7 +87,7 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
         await setActiveVehicleType(vehicle_type);
       }
 
-      // 4. Start Background Tracking (Actually handles both foreground and background)
+      // 4. Start Background Tracking (handles app minimized/killed — emits via socket only)
       const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
       if (isTaskRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
@@ -69,10 +106,71 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
         pausesUpdatesAutomatically: true,
       });
 
-      // 5. Initial Force Update (Try-catch riêng để không làm chết flow tracking nếu chỉ lỗi lấy tọa độ tức thời)
+      // 5. Start Foreground Watcher with Smart Throttle
+      //    OS fires raw updates every ~10m, then our JS logic decides whether to emit.
+      //    This matches the Web version's 3-scenario throttle for consistent behavior.
+      if (foregroundSubRef.current) {
+        foregroundSubRef.current.remove();
+        foregroundSubRef.current = null;
+      }
+
+      foregroundSubRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          distanceInterval: FOREGROUND_RAW_DISTANCE, // Low threshold — let JS throttle decide
+        },
+        (location) => {
+          const { latitude, longitude } = location.coords;
+          const now = Date.now();
+
+          const lastState = lastEmitStateRef.current;
+          const timeElapsed = now - lastState.time;
+          const distanceMoved = getDistanceInMeters(
+            lastState.lat ?? 0,
+            lastState.lng ?? 0,
+            latitude,
+            longitude
+          );
+
+          // --- Smart Throttle Logic (consistent with useWebLocationTracking.js) ---
+          const isFirstBroadcast = !lastState.time;
+          const isTimePassed = timeElapsed >= TRACKING_DEFERRED_UPDATES_INTERVAL;
+          const isDistancePassed = distanceMoved >= TRACKING_DISTANCE_INTERVAL;
+          const isDistanceLeaped = distanceMoved >= TRACKING_DEFERRED_UPDATES_DISTANCE;
+
+          // Scenario 0: First broadcast → send immediately
+          // Scenario A: Slow movement   → distance ≥ 30m AND time ≥ 2 min
+          // Scenario B: High-speed jump  → distance ≥ 50m (bypass time limit)
+          const shouldEmit =
+            isFirstBroadcast ||
+            (isTimePassed && isDistancePassed) ||
+            isDistanceLeaped;
+
+          if (shouldEmit) {
+            const locationData = {
+              runId,
+              lat: latitude,
+              lng: longitude,
+              vehicle_type: vehicle_type,
+              timestamp: new Date().toISOString()
+            };
+
+            // Instant local update (Shipper sees marker move immediately)
+            dispatch(updateShipperLocation(locationData));
+
+            // Also notify server so Admin/other viewers see the update
+            emitShipperLocation(locationData);
+
+            // Update throttle checkpoint
+            lastEmitStateRef.current = { time: now, lat: latitude, lng: longitude };
+          }
+        }
+      );
+
+      // 6. Initial Force Update (Try-catch riêng để không làm chết flow tracking nếu chỉ lỗi lấy tọa độ tức thời)
       try {
         const currentPos = await Location.getCurrentPositionAsync({ 
-          accuracy: Location.Accuracy.Balanced, // Dùng Balanced cho phát súng đầu tiên để tăng tốc độ nhận diện
+          accuracy: Location.Accuracy.Balanced,
         });
         
         const locationData = {
@@ -85,6 +183,13 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
 
         emitShipperLocation(locationData);
         dispatch(updateShipperLocation(locationData));
+
+        // Seed the throttle state so the foreground watcher doesn't double-fire
+        lastEmitStateRef.current = {
+          time: Date.now(),
+          lat: currentPos.coords.latitude,
+          lng: currentPos.coords.longitude,
+        };
       } catch (posErr) {
         console.warn('[Tracking] Initial position update failed, but background task is registered:', posErr);
       }
@@ -98,6 +203,12 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
 
   const stopTracking = useCallback(async () => {
     try {
+      // Stop foreground watcher first
+      if (foregroundSubRef.current) {
+        foregroundSubRef.current.remove();
+        foregroundSubRef.current = null;
+      }
+
       const hasLocationUpdates = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
       if (hasLocationUpdates) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
@@ -136,3 +247,4 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
 
   return { startTracking, stopTracking, forceUpdate };
 };
+
