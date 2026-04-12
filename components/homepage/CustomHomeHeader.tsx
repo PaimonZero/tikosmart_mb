@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector } from '@/store/hooks';
 import { useRouter } from 'expo-router';
 
+import { Badge } from 'react-native-paper';
+
 const CustomHomeHeader = () => {
     const router = useRouter();
     const currentUser = useAppSelector((state) => state.auth.user);
-    const notificationCount = 99;
+    const notificationData = useAppSelector((state) => state.notification.notifications);
+    const notificationCount = notificationData?.pagination?.unreadCount || 0;
 
     return (
         <SafeAreaView edges={['top']} className="bg-white border-b border-gray-200 shadow-[0px_2px_4px_rgba(0,0,0,0.1)]">
@@ -25,21 +28,22 @@ const CustomHomeHeader = () => {
                 </TouchableOpacity>
 
                 <View className="flex-row gap-3">
-                    {/* <TouchableOpacity className="p-1">
-                        <Ionicons name="search-outline" size={24} color="#333" />
-                    </TouchableOpacity> */}
-
-                    <TouchableOpacity className="p-1 relative">
+                    <TouchableOpacity
+                        className="p-1 relative"
+                        onPress={() => router.push('/notifications')}
+                    >
                         <Ionicons name="notifications-outline" size={24} color="#333" />
                         {notificationCount > 0 && (
-                            <Text className="absolute -right-1 -top-1 bg-red-500 text-white text-xs rounded-full px-1 py-0.5 min-w-[18px] text-center font-bold">
+                            <Badge
+                                size={18}
+                                style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#ef4444' }}
+                            >
                                 {notificationCount > 99 ? '99+' : notificationCount}
-                            </Text>
+                            </Badge>
                         )}
                     </TouchableOpacity>
                 </View>
             </View>
-
         </SafeAreaView>
     );
 };
