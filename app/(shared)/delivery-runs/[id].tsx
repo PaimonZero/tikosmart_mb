@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, LayoutAnimation, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDeliveryRunById, startDeliveryRun, completeDeliveryRun, cancelDeliveryRun, clearShipperLocation } from '../../../store/deliveryRunsSlice';
+import { fetchDeliveryRunById, startDeliveryRun, completeDeliveryRun, cancelDeliveryRun, clearShipperLocation, resetDeliveryRunById, updateShipperLocation } from '../../../store/deliveryRunsSlice';
 
 import DeliveryRunMap from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunMap';
 import FloatingRunInfoCard from '../../../components/delivery-runs/deliveryRunDetail/FloatingRunInfoCard';
@@ -16,7 +16,7 @@ import * as Location from 'expo-location';
 import { StartTripModal } from '../../../components/delivery-runs/deliveryRunDetail/StartTripModal';
 import { DeliveryRunActionButtons } from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunActionButtons';
 import { Divider } from 'react-native-paper';
-import { socket } from '../../../utils/socketManager';
+import { socket, emitShipperLocation } from '../../../utils/socketManager';
 
 
 export default function DeliveryRunDetailScreen() {
@@ -57,20 +57,24 @@ export default function DeliveryRunDetailScreen() {
     });
 
     const userRole = useSelector((state: RootState) => state.auth.user?.role);
+    const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
     const isShipper = userRole === 'shipper';
     const isAdminOrSup = ['admin', 'sup_shipper'].includes(userRole || '');
+    const isOwner = run?.shipperId === currentUserId;
 
     useEffect(() => {
         if (id) {
+            // First clear current data to trigger loading state
+            dispatch(resetDeliveryRunById());
+            dispatch(clearShipperLocation());
+            
+            // Then fetch new data
             dispatch(fetchDeliveryRunById(id));
         }
 
-        // Clear stale shipper location when entering a new detail screen
-        // (prevents ghost marker from a previous run appearing briefly)
-        dispatch(clearShipperLocation());
-
         return () => {
-            // Clear shipper location when leaving the detail screen
+            // Cleanup when leaving or switching
+            dispatch(resetDeliveryRunById());
             dispatch(clearShipperLocation());
         };
     }, [id, dispatch]);
@@ -95,6 +99,37 @@ export default function DeliveryRunDetailScreen() {
             socket.off('connect', handleSubscribe);
         };
     }, [id, run?.status]);
+
+    // Proactive GPS sync for Shippers (Handles "Point B from yesterday" issue)
+    useEffect(() => {
+        if (!isShipper || !id || !run?.id || !isOwner) return;
+
+        const syncPhysicalLocation = async () => {
+            try {
+                const { status } = await Location.getForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+
+                const position = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                });
+
+                const locationData = {
+                    runId: id,
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    vehicle_type: run?.vehicle_type,
+                    timestamp: new Date().toISOString(),
+                };
+
+                dispatch(updateShipperLocation(locationData));
+                emitShipperLocation(locationData);
+            } catch (err) {
+                console.warn("[GPS Sync] Proactive update failed:", err);
+            }
+        };
+
+        syncPhysicalLocation();
+    }, [id, run?.id, isShipper, isOwner, run?.vehicle_type, dispatch]);
 
     const showAlert = (title: string, content: string, isDanger = false) => {
         setDialogConfig({ title, content, isDanger, showCancel: false, onConfirm: () => setDialogVisible(false) });

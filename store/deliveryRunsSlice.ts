@@ -415,6 +415,17 @@ const deliveryRunsSlice = createSlice({
         state.fetchStatus = "succeeded";
         state.deliveryRunById = action.payload.data;
         deliveryRunsAdapter.upsertOne(state, action.payload.data);
+
+        // Sync shipper location from the fetched detail if available
+        const { shipperLastLat, shipperLastLng, status } = action.payload.data || {};
+        if (status === 'in_progress' && shipperLastLat && shipperLastLng) {
+           state.shipperLocation = {
+              lat: Number(shipperLastLat),
+              lng: Number(shipperLastLng),
+              lastUpdate: new Date().toISOString(),
+              vehicle_type: action.payload.data.vehicle_type
+           };
+        }
       })
       .addCase(fetchDeliveryRunById.rejected, (state, action) => {
         state.fetchStatus = "failed";
@@ -473,8 +484,18 @@ const deliveryRunsSlice = createSlice({
         state.startStatus = "loading";
         state.startError = null;
       })
-      .addCase(startDeliveryRun.fulfilled, (state) => {
+      .addCase(startDeliveryRun.fulfilled, (state, action) => {
         state.startStatus = "succeeded";
+        // Also sync location if provided in the start response
+        const { shipperLastLat, shipperLastLng } = action.payload.data || {};
+        if (shipperLastLat && shipperLastLng) {
+           state.shipperLocation = {
+              lat: Number(shipperLastLat),
+              lng: Number(shipperLastLng),
+              lastUpdate: new Date().toISOString(),
+              vehicle_type: action.payload.data.vehicle_type
+           };
+        }
       })
       .addCase(startDeliveryRun.rejected, (state, action) => {
         state.startStatus = "failed";

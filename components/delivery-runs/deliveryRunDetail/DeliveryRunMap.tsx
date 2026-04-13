@@ -378,8 +378,8 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                     <CustomMarkerWrapper key={marker.id} marker={marker} />
                 ))}
 
-                {/* Shipper Marker — only visible for in_progress runs with valid coords */}
-                {shipperLocation && run.status === 'in_progress' &&
+                {/* Shipper Marker — visible for active runs with valid coords */}
+                {shipperLocation && (run.status === 'in_progress' || run.status === 'assigned') &&
                     shipperLocation.lat !== 0 && shipperLocation.lng !== 0 && (
                         <ShipperMarker
                             coordinate={{
