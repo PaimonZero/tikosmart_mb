@@ -102,7 +102,7 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
         }
 
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
           distanceInterval: TRACKING_DISTANCE_INTERVAL,
           deferredUpdatesInterval: TRACKING_DEFERRED_UPDATES_INTERVAL,
           deferredUpdatesDistance: TRACKING_DEFERRED_UPDATES_DISTANCE,
@@ -125,7 +125,8 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
 
       foregroundSubRef.current = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000,
           distanceInterval: FOREGROUND_RAW_DISTANCE, // Low threshold — let JS throttle decide
         },
         (location) => {
@@ -179,7 +180,7 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
       // 6. Initial Force Update (Try-catch riêng để không làm chết flow tracking nếu chỉ lỗi lấy tọa độ tức thời)
       try {
         const currentPos = await Location.getCurrentPositionAsync({ 
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
         });
         
         const locationData = {
@@ -238,7 +239,7 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
   const forceUpdate = useCallback(async () => {
     if (!runId) return;
     try {
-      const currentPos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const currentPos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const locationData = {
         runId,
         lat: currentPos.coords.latitude,

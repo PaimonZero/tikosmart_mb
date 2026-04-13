@@ -88,7 +88,7 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
 
     React.useEffect(() => {
         setTracksViewChanges(true);
-        const timer = setTimeout(() => setTracksViewChanges(false), 500);
+        const timer = setTimeout(() => setTracksViewChanges(false), 200);
         return () => clearTimeout(timer);
     }, [coordinate.latitude, coordinate.longitude, vehicleType]);
 
@@ -142,9 +142,24 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
 
 export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
     const mapRef = useRef<MapView>(null);
+    const didAutoFitRef = useRef(false);
+    const lastAutoFitKeyRef = useRef<string>('');
     const shipperLocation = useSelector((state: RootState) => state.deliveryRuns.shipperLocation);
     const insets = useSafeAreaInsets();
     const { height } = useWindowDimensions();
+
+    const parseCoord = (value: any): number | null => {
+        const num = typeof value === 'number' ? value : typeof value === 'string' ? parseFloat(value) : Number(value);
+        return Number.isFinite(num) ? num : null;
+    };
+
+    const isValidCoordinate = (lat: any, lng: any) => {
+        const latitude = parseCoord(lat);
+        const longitude = parseCoord(lng);
+        if (latitude == null || longitude == null) return false;
+        if (latitude === 0 && longitude === 0) return false;
+        return true;
+    };
 
     const mapPadding = useMemo(() => ({
         top: insets.top + 80, // Header space
@@ -154,10 +169,10 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
     }), [insets.top, insets.bottom, height]);
 
     const handleCenterLocation = () => {
-        if (shipperLocation && shipperLocation.lat && shipperLocation.lng && shipperLocation.lat !== 0 && shipperLocation.lng !== 0) {
+        if (shipperLocation && isValidCoordinate(shipperLocation.lat, shipperLocation.lng)) {
             mapRef.current?.animateToRegion({
-                latitude: parseFloat(shipperLocation.lat as any),
-                longitude: parseFloat(shipperLocation.lng as any),
+                latitude: parseCoord(shipperLocation.lat) as number,
+                longitude: parseCoord(shipperLocation.lng) as number,
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
             }, 1000);
@@ -305,14 +320,33 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
 
     // 3. Auto-fit logic
     useEffect(() => {
+        // Reset the auto-fit guard when the run/route changes meaningfully (so a new run still fits once).
+        const start = routeCoordinates[0];
+        const end = routeCoordinates.length > 0 ? routeCoordinates[routeCoordinates.length - 1] : undefined;
+        const autoFitKey = [
+            run?.id ?? run?.code ?? '',
+            run?.status ?? '',
+            routeCoordinates.length,
+            start ? `${start.latitude.toFixed(6)},${start.longitude.toFixed(6)}` : 'none',
+            end ? `${end.latitude.toFixed(6)},${end.longitude.toFixed(6)}` : 'none',
+        ].join('|');
+
+        if (lastAutoFitKeyRef.current !== autoFitKey) {
+            lastAutoFitKeyRef.current = autoFitKey;
+            didAutoFitRef.current = false;
+        }
+
+        // Key fix: do NOT re-fit bounds on every shipper location update.
+        if (didAutoFitRef.current) return;
+
         if (mapRef.current) {
             const coordsToFit = [...routeCoordinates];
 
             // Add shipper location to fit
-            if (shipperLocation && run.status !== 'completed') {
+            if (shipperLocation && run.status !== 'completed' && isValidCoordinate(shipperLocation.lat, shipperLocation.lng)) {
                 coordsToFit.push({
-                    latitude: parseFloat(shipperLocation.lat as any),
-                    longitude: parseFloat(shipperLocation.lng as any)
+                    latitude: parseCoord(shipperLocation.lat) as number,
+                    longitude: parseCoord(shipperLocation.lng) as number,
                 });
             }
 
@@ -323,12 +357,13 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                         edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
                         animated: true,
                     });
+                    didAutoFitRef.current = true;
                 }, 500);
 
                 return () => clearTimeout(timeoutId);
             }
         }
-    }, [routeCoordinates, leaderLineCoords, shipperLocation, run.status]);
+    }, [routeCoordinates, shipperLocation, run?.id, run?.status]);
 
     if (routeCoordinates.length === 0 && markers.length === 0) {
         return (
