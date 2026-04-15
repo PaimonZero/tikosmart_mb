@@ -20,7 +20,23 @@ import { socket, emitShipperLocation } from '../../../utils/socketManager';
 
 
 export default function DeliveryRunDetailScreen() {
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const {
+        id,
+        voiceOrderId,
+        voiceAmount,
+        voiceNote,
+        voiceOpenQR,
+        voiceAction,
+        voiceNonce,
+    } = useLocalSearchParams<{
+        id: string;
+        voiceOrderId?: string;
+        voiceAmount?: string;
+        voiceNote?: string;
+        voiceOpenQR?: string;
+        voiceAction?: string;
+        voiceNonce?: string;
+    }>();
     const dispatch = useDispatch<AppDispatch>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -40,6 +56,36 @@ export default function DeliveryRunDetailScreen() {
     // Start Trip states
     const [startModalVisible, setStartModalVisible] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
+
+    const voiceOrderPayload = useMemo(() => {
+        if (!voiceOrderId) return null;
+        const parsedAmount =
+            voiceAmount !== undefined && voiceAmount !== "" ? Number(voiceAmount) : undefined;
+
+        return {
+            orderId: String(voiceOrderId),
+            amount: Number.isFinite(parsedAmount as number) ? (parsedAmount as number) : undefined,
+            note: voiceNote ? String(voiceNote) : undefined,
+            openQR: voiceOpenQR === "1",
+            action: voiceAction ? String(voiceAction) : undefined,
+            nonce: voiceNonce ? String(voiceNonce) : undefined,
+        };
+    }, [voiceAction, voiceAmount, voiceNonce, voiceNote, voiceOpenQR, voiceOrderId]);
+
+    useEffect(() => {
+        if (!voiceNonce) return;
+        const timer = setTimeout(() => {
+            router.setParams({
+                voiceOrderId: undefined,
+                voiceAmount: undefined,
+                voiceNote: undefined,
+                voiceOpenQR: undefined,
+                voiceAction: undefined,
+                voiceNonce: undefined,
+            } as any);
+        }, 1200);
+        return () => clearTimeout(timer);
+    }, [router, voiceNonce]);
 
     // Dialog state for general messages
     const [dialogVisible, setDialogVisible] = useState(false);
@@ -343,6 +389,7 @@ export default function DeliveryRunDetailScreen() {
                             runStatus={run.status}
                             avoidToll={run.avoid_toll}
                             onRefresh={onRefresh}
+                            voiceCommandPayload={voiceOrderPayload}
                         />
                     )}
                     ListHeaderComponent={
