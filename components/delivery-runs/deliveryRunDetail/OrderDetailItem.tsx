@@ -27,9 +27,17 @@ interface OrderDetailItemProps {
     runStatus: string;
     onRefresh: () => void;
     avoidToll?: boolean;
+    voiceCommandPayload?: {
+        orderId: string;
+        amount?: number;
+        note?: string;
+        openQR?: boolean;
+        action?: string;
+        nonce?: string;
+    } | null;
 }
 
-export default function OrderDetailItem({ order, index, isLast, runStatus, onRefresh, avoidToll }: OrderDetailItemProps) {
+export default function OrderDetailItem({ order, index, isLast, runStatus, onRefresh, avoidToll, voiceCommandPayload }: OrderDetailItemProps) {
     const dispatch = useDispatch<AppDispatch>();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const userRole = useSelector((state: RootState) => state.auth.user?.role);
@@ -42,6 +50,7 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
     // Modal states for Completion/Cancellation
     const [modalVisible, setModalVisible] = useState(false);
     const [modalType, setModalType] = useState<'complete' | 'cancel' | null>(null);
+    const lastVoiceNonceRef = React.useRef<string | null>(null);
 
     // ConfirmDialog State
     const [dialogVisible, setDialogVisible] = useState(false);
@@ -204,6 +213,24 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
             showError("Không thể mở ứng dụng bản đồ");
         });
     };
+
+    React.useEffect(() => {
+        if (!voiceCommandPayload) return;
+        if (voiceCommandPayload.orderId !== order.id) return;
+        if (!voiceCommandPayload.nonce) return;
+        if (lastVoiceNonceRef.current === voiceCommandPayload.nonce) return;
+
+        lastVoiceNonceRef.current = voiceCommandPayload.nonce;
+
+        const action = String(voiceCommandPayload.action || "").toLowerCase();
+        const targetType: 'complete' | 'cancel' = action.includes("cancel") ? "cancel" : "complete";
+
+        setModalType(targetType);
+        setModalVisible(true);
+    }, [order.id, voiceCommandPayload]);
+
+    const matchedVoicePayload =
+        voiceCommandPayload?.orderId === order.id ? voiceCommandPayload : null;
 
     return (
         <View className={clsx("flex-row items-stretch", !isLast && "mb-4")}>
@@ -388,6 +415,16 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                 type={modalType}
                 userRole={userRole}
                 order={order}
+                voicePrefill={
+                    matchedVoicePayload
+                        ? {
+                            amount: matchedVoicePayload.amount,
+                            note: matchedVoicePayload.note,
+                            openQR: matchedVoicePayload.openQR,
+                            nonce: matchedVoicePayload.nonce,
+                        }
+                        : null
+                }
                 onClose={() => setModalVisible(false)}
                 onSubmit={handleActionSubmit}
             />

@@ -12,6 +12,12 @@ interface OrderActionModalProps {
     type: 'complete' | 'cancel' | null;
     userRole: string | null;
     order: any;
+    voicePrefill?: {
+        amount?: number;
+        note?: string;
+        openQR?: boolean;
+        nonce?: string;
+    } | null;
     onClose: () => void;
     onSubmit: (data: { actualPay?: number; note?: string; evdUrl?: string }) => Promise<void>;
 }
@@ -21,13 +27,14 @@ function clsx(...args: any[]) {
     return args.filter(Boolean).join(' ');
 }
 
-export const OrderActionModal = ({ visible, type, userRole, order, onClose, onSubmit }: OrderActionModalProps) => {
+export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill, onClose, onSubmit }: OrderActionModalProps) => {
     const [note, setNote] = useState('');
     const [actualPay, setActualPay] = useState('');
     const [evidenceImage, setEvidenceImage] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [qrVisible, setQrVisible] = useState(false);
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+    const lastVoiceNonceRef = React.useRef<string | null>(null);
 
     const isLocked = order?.status === 'completed' || order?.status === 'cancelled';
     const isAuthorized = (type === 'complete' && (userRole === 'shipper' || userRole === 'sup_shipper')) ||
@@ -50,6 +57,25 @@ export const OrderActionModal = ({ visible, type, userRole, order, onClose, onSu
             setIsSubmitting(false);
         }
     }, [visible, type, order]);
+
+    useEffect(() => {
+        if (!visible || !voicePrefill?.nonce) return;
+        if (lastVoiceNonceRef.current === voicePrefill.nonce) return;
+
+        lastVoiceNonceRef.current = voicePrefill.nonce;
+
+        if (typeof voicePrefill.note === "string") {
+            setNote(voicePrefill.note);
+        }
+
+        if (typeof voicePrefill.amount === "number" && Number.isFinite(voicePrefill.amount)) {
+            setActualPay(String(voicePrefill.amount));
+        }
+
+        if (voicePrefill.openQR && type === "complete") {
+            setQrVisible(true);
+        }
+    }, [type, visible, voicePrefill]);
 
     const pickImage = async (useCamera: boolean) => {
         let result;
