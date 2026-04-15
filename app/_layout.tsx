@@ -32,6 +32,7 @@ import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
 import useDeliveryEvents from "@/hooks/socket-events/useDeliveryEvents";
 import useGlobalTracking from "@/hooks/useGlobalTracking";
 import "@/utils/locationTask";
+import VoiceAssistantFloatingButton from "@/components/voiceAssistant/VoiceAssistantFloatingButton";
 
 export const unstable_settings = {};
 
@@ -141,6 +142,7 @@ function RootLayoutInner() {
         richColors={true} // Khuyên dùng: Tự động tô màu Xanh (Success) / Đỏ (Error)
         closeButton={true} // Tùy chọn: Hiện nút X để tắt nhanh
       />
+      <VoiceAssistantFloatingButton />
       <StatusBar style="dark" />
     </ThemeProvider>
   );

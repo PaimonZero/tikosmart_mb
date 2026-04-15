@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import { getStatusStyles } from "../utils/helpers";
+import { formatDateShortVN } from "@/utils/formatters";
 
 interface DeliveryRunCardProps {
     item: any;
@@ -14,6 +15,7 @@ interface DeliveryRunCardProps {
 export const DeliveryRunCard = React.memo(({ item, onPress, userRole }: DeliveryRunCardProps) => {
     const statusStyle = getStatusStyles(item.status);
     const dateStr = item.createdAt ? dayjs(item.createdAt).locale("vi").format("HH:mm - DD/MM/YYYY") : "N/A";
+    const shortDate = formatDateShortVN(item.createdAt);
     const ordersCount = item.orders?.length || 0;
 
     return (
@@ -34,7 +36,7 @@ export const DeliveryRunCard = React.memo(({ item, onPress, userRole }: Delivery
                         </View>
                         <View className="flex-1">
                             <Text className="text-gray-900 font-extrabold text-lg leading-tight" numberOfLines={1}>
-                                Chuyến {item.dailySeq || "N/A"} - {dayjs(item.createdAt).locale("vi").format("DD/MM/YYYY")}
+                                Chuyến {item.dailySeq || "N/A"} - {shortDate}
                             </Text>
                             <Text className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mt-0.5">
                                 {item.deliveryNo || "N/A"}

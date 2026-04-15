@@ -1,7 +1,7 @@
 import { Calendar, ClockAlert, User, Users } from 'lucide-react-native';
-import dayjs from 'dayjs';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { formatDateShortVN } from '@/utils/formatters';
 import StatusBadge from './StatusBadge';
 
 interface TaskCardProps {
@@ -12,7 +12,7 @@ interface TaskCardProps {
 
 const TaskCard = React.memo(({ task, userRole, onPress }: TaskCardProps) => {
     const dailySeq = task?.dailySeq || '?';
-    const dateLabel = task?.createdAt ? dayjs(task.createdAt).format('DD/MM/YYYY') : '';
+    const dateLabel = formatDateShortVN(task?.createdAt);
     const displayId = dateLabel ? `Nhiệm vụ ${dailySeq} - ${dateLabel}` : `Nhiệm vụ ${dailySeq}`;
     const orderNo = task?.salesOrder?.orderNo || '—';
     const customerName = task?.salesOrder?.customerName || '';

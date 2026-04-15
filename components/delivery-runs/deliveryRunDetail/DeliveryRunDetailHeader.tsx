@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { getStatusStyles } from '../utils/helpers';
 import { Divider } from 'react-native-paper';
+import { formatDateShortVN } from '@/utils/formatters';
 
 interface DeliveryRunDetailHeaderProps {
     run: any;
@@ -23,7 +24,7 @@ export default function DeliveryRunDetailHeader({ run, hideCompactInfo }: Delive
                     <View>
                         <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Mã chuyến</Text>
                         <Text className="text-slate-900 font-black text-lg">
-                            Chuyến {run.dailySeq || 'N/A'} - {run.createdAt ? dayjs(run.createdAt).locale('vi').format('DD/MM/YYYY') : '---'}
+                            Chuyến {run.dailySeq || 'N/A'} - {formatDateShortVN(run.createdAt)}
                         </Text>
                     </View>
                     <View className={clsx("px-3 py-1.5 rounded-full border", statusStyle.bg, statusStyle.border)}>
