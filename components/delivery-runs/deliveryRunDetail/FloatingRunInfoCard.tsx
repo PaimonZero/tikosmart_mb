@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import dayjs from 'dayjs';
-import 'dayjs/locale/vi';
 import { getStatusStyles } from '../utils/helpers';
 import DeliveryRunDetailHeader from './DeliveryRunDetailHeader';
+import { formatDateShortVN } from '@/utils/formatters';
 
 interface FloatingRunInfoCardProps {
     run: any;
@@ -44,7 +43,7 @@ export default function FloatingRunInfoCard({ run, isExpanded, onToggle, classNa
                             </View>
                         </View>
                         <Text className="text-slate-900 font-black text-base">
-                            Chuyến {run.dailySeq || 'N/A'} - {run.createdAt ? dayjs(run.createdAt).locale('vi').format('DD/MM/YYYY') : '---'}
+                            Chuyến {run.dailySeq || 'N/A'} - {formatDateShortVN(run.createdAt)}
                         </Text>
                     </View>
                 </View>
