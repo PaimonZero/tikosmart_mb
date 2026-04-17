@@ -340,11 +340,15 @@ const taskSlice = createSlice({
     addPreparationTaskRealtime: (state, action) => {
       const newTask = action.payload;
       if (Array.isArray(state.tasks)) {
-        state.tasks.unshift(newTask);
+        const exists = state.tasks.some(t => t.id === newTask.id);
+        if (!exists) state.tasks.unshift(newTask);
       } else if (state.tasks && Array.isArray((state.tasks as any).data)) {
-        (state.tasks as any).data.unshift(newTask);
-        if ((state.tasks as any).pagination) {
-          (state.tasks as any).pagination.total += 1;
+        const exists = (state.tasks as any).data.some((t: any) => t.id === newTask.id);
+        if (!exists) {
+          (state.tasks as any).data.unshift(newTask);
+          if ((state.tasks as any).pagination) {
+            (state.tasks as any).pagination.total += 1;
+          }
         }
       }
     },
@@ -405,21 +409,23 @@ const taskSlice = createSlice({
       })
       .addCase(fetchMoreTasks.fulfilled, (state, action) => {
         const newData = action.payload?.data || action.payload || [];
-        // Extract array if it was wrapped or append directly
         const freshItems = Array.isArray(newData) ? newData : [];
 
-        // Appending to the existing array safely based on structure
         if ((state.tasks as any).data) {
-          (state.tasks as any).data = [
-            ...(state.tasks as any).data,
-            ...freshItems,
-          ];
-          // Also update pagination meta if provided by payload
+          const currentData = (state.tasks as any).data;
+          const filteredFresh = freshItems.filter(
+            (newItem: any) => !currentData.some((oldItem: any) => oldItem.id === newItem.id)
+          );
+          (state.tasks as any).data = [...currentData, ...filteredFresh];
+
           if (action.payload?.total !== undefined) {
             (state.tasks as any).total = action.payload.total;
           }
         } else if (Array.isArray(state.tasks)) {
-          state.tasks = [...state.tasks, ...freshItems];
+          const filteredFresh = freshItems.filter(
+            (newItem: any) => !state.tasks.some((oldItem: any) => oldItem.id === newItem.id)
+          );
+          state.tasks = [...state.tasks, ...filteredFresh];
         } else {
           state.tasks = action.payload;
         }
@@ -468,12 +474,15 @@ const taskSlice = createSlice({
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.createStatus = "succeeded";
+        const newTask = action.payload.data || action.payload;
+        if (!newTask?.id) return;
+
         if ((state.tasks as any).data) {
-          (state.tasks as any).data.unshift(
-            action.payload.data || action.payload,
-          );
+          const exists = (state.tasks as any).data.some((t: any) => t.id === newTask.id);
+          if (!exists) (state.tasks as any).data.unshift(newTask);
         } else if (Array.isArray(state.tasks)) {
-          state.tasks.unshift(action.payload.data || action.payload);
+          const exists = state.tasks.some(t => t.id === newTask.id);
+          if (!exists) state.tasks.unshift(newTask);
         }
       })
       .addCase(createTask.rejected, (state, action) => {
