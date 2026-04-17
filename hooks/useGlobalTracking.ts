@@ -157,7 +157,7 @@ const useGlobalTracking = () => {
             await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
 
           await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-            accuracy: Location.Accuracy.Balanced,
+            accuracy: Location.Accuracy.High,
             distanceInterval: TRACKING_DISTANCE_INTERVAL,
             deferredUpdatesInterval: TRACKING_DEFERRED_UPDATES_INTERVAL,
             deferredUpdatesDistance: TRACKING_DEFERRED_UPDATES_DISTANCE,
@@ -180,7 +180,8 @@ const useGlobalTracking = () => {
 
         foregroundSubRef.current = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.Balanced,
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
             distanceInterval: FOREGROUND_RAW_DISTANCE,
           },
           (location) => {
@@ -230,7 +231,7 @@ const useGlobalTracking = () => {
         // ── Initial Force Update ──
         try {
           const pos = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
+            accuracy: Location.Accuracy.High,
           });
           const data = {
             runId,

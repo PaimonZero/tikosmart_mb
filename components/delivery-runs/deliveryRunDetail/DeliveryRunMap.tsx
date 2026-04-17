@@ -1,15 +1,49 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
 import { Truck } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 
 interface DeliveryRunMapProps {
     run: any;
 }
+
+interface EdgeIndicatorState {
+    visible: boolean;
+    x: number;
+    y: number;
+    distanceMeters: number;
+}
+
+const EARTH_RADIUS_METERS = 6371000;
+
+const toRadians = (deg: number) => (deg * Math.PI) / 180;
+
+const haversineDistanceMeters = (
+    from: { latitude: number; longitude: number },
+    to: { latitude: number; longitude: number }
+) => {
+    const dLat = toRadians(to.latitude - from.latitude);
+    const dLng = toRadians(to.longitude - from.longitude);
+    const lat1 = toRadians(from.latitude);
+    const lat2 = toRadians(to.latitude);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return EARTH_RADIUS_METERS * c;
+};
+
+const formatDistanceLabel = (meters: number) => {
+    if (!Number.isFinite(meters) || meters <= 0) return '--';
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+};
 
 // Removed MapMarkerCustom as custom views in react-native-maps Markers can cause blinking and performance issues on some devices.
 // Re-added with tracksViewChanges hack.
@@ -88,7 +122,7 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
 
     React.useEffect(() => {
         setTracksViewChanges(true);
-        const timer = setTimeout(() => setTracksViewChanges(false), 500);
+        const timer = setTimeout(() => setTracksViewChanges(false), 200);
         return () => clearTimeout(timer);
     }, [coordinate.latitude, coordinate.longitude, vehicleType]);
 
@@ -142,9 +176,17 @@ const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { l
 
 export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
     const mapRef = useRef<MapView>(null);
+    const lastAutoFitSignatureRef = useRef<string>('');
     const shipperLocation = useSelector((state: RootState) => state.deliveryRuns.shipperLocation);
     const insets = useSafeAreaInsets();
-    const { height } = useWindowDimensions();
+    const { height, width } = useWindowDimensions();
+    const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
+    const [edgeIndicator, setEdgeIndicator] = useState<EdgeIndicatorState>({
+        visible: false,
+        x: 0,
+        y: 0,
+        distanceMeters: 0,
+    });
 
     const mapPadding = useMemo(() => ({
         top: insets.top + 80, // Header space
@@ -167,6 +209,61 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
             // Since we have user tracking, shipperLocation should mostly be valid.
         }
     };
+
+    const updateTruckEdgeIndicator = useCallback(async () => {
+        if (!mapRef.current) return;
+
+        const isActiveRun = run.status === 'in_progress' || run.status === 'assigned';
+        if (!isActiveRun || !shipperLocation || !shipperLocation.lat || !shipperLocation.lng) {
+            setEdgeIndicator(prev => (prev.visible ? { ...prev, visible: false } : prev));
+            return;
+        }
+
+        const lat = parseFloat(shipperLocation.lat as any);
+        const lng = parseFloat(shipperLocation.lng as any);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
+            setEdgeIndicator(prev => (prev.visible ? { ...prev, visible: false } : prev));
+            return;
+        }
+
+        try {
+            const point = await mapRef.current.pointForCoordinate({ latitude: lat, longitude: lng });
+
+            const safeLeft = 16;
+            const safeRight = width - 16;
+            const safeTop = insets.top + 92;
+            const safeBottom = height - mapPadding.bottom - 16;
+
+            const outside =
+                point.x < safeLeft ||
+                point.x > safeRight ||
+                point.y < safeTop ||
+                point.y > safeBottom;
+
+            if (!outside) {
+                setEdgeIndicator(prev => (prev.visible ? { ...prev, visible: false } : prev));
+                return;
+            }
+
+            const clampedX = Math.min(Math.max(point.x, safeLeft), safeRight);
+            const clampedY = Math.min(Math.max(point.y, safeTop), safeBottom);
+            const distanceMeters = currentRegion
+                ? haversineDistanceMeters(
+                    { latitude: currentRegion.latitude, longitude: currentRegion.longitude },
+                    { latitude: lat, longitude: lng }
+                )
+                : 0;
+
+            setEdgeIndicator({
+                visible: true,
+                x: clampedX,
+                y: clampedY,
+                distanceMeters,
+            });
+        } catch {
+            // Ignore temporary conversion errors while map is mounting/animating.
+        }
+    }, [run.status, shipperLocation, width, insets.top, height, mapPadding.bottom, currentRegion]);
 
     // 1. Parse route coordinates from GeoJSON or fallback to straight lines
     const routeCoordinates = useMemo(() => {
@@ -305,30 +402,26 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
 
     // 3. Auto-fit logic
     useEffect(() => {
-        if (mapRef.current) {
-            const coordsToFit = [...routeCoordinates];
+        if (!mapRef.current || routeCoordinates.length === 0) return;
 
-            // Add shipper location to fit
-            if (shipperLocation && run.status !== 'completed') {
-                coordsToFit.push({
-                    latitude: parseFloat(shipperLocation.lat as any),
-                    longitude: parseFloat(shipperLocation.lng as any)
-                });
-            }
+        // Only auto-fit when route topology changes; do not re-fit on live shipper location updates.
+        const signature = JSON.stringify(routeCoordinates);
+        if (signature === lastAutoFitSignatureRef.current) return;
+        lastAutoFitSignatureRef.current = signature;
 
-            if (coordsToFit.length > 0) {
-                // Give a small delay to ensure map is ready and cleanup to avoid jitter/memory leaks
-                const timeoutId = setTimeout(() => {
-                    mapRef.current?.fitToCoordinates(coordsToFit, {
-                        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-                        animated: true,
-                    });
-                }, 500);
+        const timeoutId = setTimeout(() => {
+            mapRef.current?.fitToCoordinates(routeCoordinates, {
+                edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                animated: true,
+            });
+        }, 500);
 
-                return () => clearTimeout(timeoutId);
-            }
-        }
-    }, [routeCoordinates, leaderLineCoords, shipperLocation, run.status]);
+        return () => clearTimeout(timeoutId);
+    }, [routeCoordinates]);
+
+    useEffect(() => {
+        void updateTruckEdgeIndicator();
+    }, [updateTruckEdgeIndicator]);
 
     if (routeCoordinates.length === 0 && markers.length === 0) {
         return (
@@ -347,6 +440,10 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                 provider={PROVIDER_GOOGLE}
                 style={StyleSheet.absoluteFillObject}
                 mapPadding={mapPadding}
+                onRegionChangeComplete={(region) => {
+                    setCurrentRegion(region);
+                    void updateTruckEdgeIndicator();
+                }}
                 // showsUserLocation={true}
                 // showsMyLocationButton={true}
                 showsCompass={true}
@@ -390,6 +487,58 @@ export default function DeliveryRunMap({ run }: DeliveryRunMapProps) {
                         />
                     )}
             </MapView>
+
+            {edgeIndicator.visible && (
+                <View
+                    pointerEvents="box-none"
+                    className="absolute"
+                    style={{
+                        left: edgeIndicator.x - (edgeIndicator.x > width - 120 ? 126 : 18),
+                        top: edgeIndicator.y - 18,
+                        flexDirection: edgeIndicator.x > width - 120 ? 'row-reverse' : 'row',
+                        alignItems: 'center',
+                    }}
+                >
+                    <TouchableOpacity
+                        className="items-center justify-center"
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#1D4ED8',
+                            borderWidth: 2,
+                            borderColor: 'white',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 3 },
+                            shadowOpacity: 0.25,
+                            shadowRadius: 4,
+                            elevation: 8,
+                        }}
+                        onPress={handleCenterLocation}
+                        activeOpacity={0.85}
+                    >
+                        <Truck size={18} color="white" />
+                    </TouchableOpacity>
+
+                    <View
+                        className="bg-white rounded-full border border-slate-200"
+                        style={{
+                            marginHorizontal: 6,
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.15,
+                            shadowRadius: 3,
+                            elevation: 3,
+                        }}
+                    >
+                        <Text className="text-[11px] font-bold text-slate-700">
+                            {formatDistanceLabel(edgeIndicator.distanceMeters)}
+                        </Text>
+                    </View>
+                </View>
+            )}
 
             <TouchableOpacity
                 className="absolute bg-white rounded-full items-center justify-center border border-slate-200"

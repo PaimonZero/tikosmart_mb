@@ -46,36 +46,20 @@ const POPUP_GAP = 12;
 const TAP_MOVE_THRESHOLD = 4;
 const ALLOWED_ROLES = ["admin", "picker", "shipper"];
 
-const normalizePathname = (pathname: string) => pathname.toLowerCase().replace(/\/+$/, "");
-
 const routeToVoiceRole = (pathname: string): VoiceRole | null => {
-  const p = normalizePathname(pathname);
+  const p = pathname.toLowerCase();
   if (p.includes("taskmanage") || p.includes("task-manage")) return "picker";
   if (p.includes("deliveryruns") || p.includes("delivery-runs")) return "shipper";
   return null;
 };
 
-const isRootAllowedRoute = (pathname: string) => {
-  const p = normalizePathname(pathname);
-
-  // Picker root pages
-  if (p.endsWith("/taskmanage")) return true;
-  if (p.endsWith("/task-manage")) return true;
-  if (p.endsWith("/task-manage/index")) return true;
-
-  // Shipper root pages
-  if (p.endsWith("/deliveryruns")) return true;
-  if (p.endsWith("/delivery-runs")) return true;
-  if (p.endsWith("/delivery-runs/deliveryrunlist")) return true;
-
-  return false;
-};
+const isAllowedRoute = (pathname: string) => routeToVoiceRole(pathname) !== null;
 
 const getDefaultPosition = () => {
-  const { width } = Dimensions.get("window");
+  const { width, height } = Dimensions.get("window");
   return {
     x: Math.max(EDGE_PADDING, width - BUTTON_SIZE - EDGE_PADDING),
-    y: EDGE_PADDING + 48,
+    y: Math.max(EDGE_PADDING + 48, height - BUTTON_SIZE - 140),
   };
 };
 
@@ -118,7 +102,7 @@ export default function VoiceAssistantFloatingButton() {
   const isProcessing = voiceState === "processing";
 
   const allowed = useMemo(() => {
-    const routeAllowed = isRootAllowedRoute(pathname || "");
+    const routeAllowed = isAllowedRoute(pathname || "");
     const roleAllowed = ALLOWED_ROLES.includes(String(currentRole || ""));
     return routeAllowed && roleAllowed;
   }, [pathname, currentRole]);
