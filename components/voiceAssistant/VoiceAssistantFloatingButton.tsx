@@ -19,6 +19,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Animated,
+  AppState,
   Dimensions,
   Keyboard,
   PanResponder,
@@ -210,6 +211,32 @@ export default function VoiceAssistantFloatingButton() {
     await rec.startAsync();
   }, []);
 
+  const waitForAppToBeActive = useCallback((timeoutMs = 2500) => {
+    if (AppState.currentState === "active") {
+      return Promise.resolve(true);
+    }
+
+    return new Promise<boolean>((resolve) => {
+      let done = false;
+
+      const finish = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        sub.remove();
+        clearTimeout(timer);
+        resolve(ok);
+      };
+
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") {
+          finish(true);
+        }
+      });
+
+      const timer = setTimeout(() => finish(false), timeoutMs);
+    });
+  }, []);
+
   const startListening = useCallback(async () => {
     if (["listening", "transcribing", "processing"].includes(voiceState)) return;
 
@@ -230,9 +257,12 @@ export default function VoiceAssistantFloatingButton() {
         return;
       }
 
-      // iOS đôi lúc cần 1 nhịp sau khi user vừa bấm Allow lần đầu
-      if (Platform.OS === "ios" && grantedNow) {
-        await new Promise((resolve) => setTimeout(resolve, 250));
+      // iOS can briefly move app to background while permission alert is handled.
+      const appIsActive = await waitForAppToBeActive(grantedNow ? 3500 : 1500);
+      if (!appIsActive) {
+        toast.warning("Ứng dụng vừa cấp quyền microphone. Vui lòng bấm lại để ghi âm.");
+        setVoiceState("idle");
+        return;
       }
 
       await Audio.setAudioModeAsync({
@@ -249,16 +279,29 @@ export default function VoiceAssistantFloatingButton() {
       fallbackUriRef.current = null;
       setVoiceState("listening");
 
+      if (Platform.OS === "ios") {
+        const stillActive = await waitForAppToBeActive(1200);
+        if (!stillActive) {
+          setVoiceState("idle");
+          return;
+        }
+      }
+
       if (sessionId === sessionRef.current) {
         await startFallbackRecording();
       }
     } catch (err: any) {
-      toast.error("Lỗi microphone", {
-        description: err?.message || "Không thể khởi tạo ghi âm.",
-      });
+      const message = String(err?.message || "");
+      if (message.toLowerCase().includes("currently in the background")) {
+        toast.warning("Ứng dụng vừa cấp quyền microphone. Vui lòng thử lại.");
+      } else {
+        toast.error("Lỗi microphone", {
+          description: message || "Không thể khởi tạo ghi âm.",
+        });
+      }
       setVoiceState("idle");
     }
-  }, [startFallbackRecording, voiceState]);
+  }, [startFallbackRecording, voiceState, waitForAppToBeActive]);
 
   const startListeningWithDelay = useCallback(() => {
     if (["preparing", "listening", "transcribing", "processing"].includes(voiceState)) return;
