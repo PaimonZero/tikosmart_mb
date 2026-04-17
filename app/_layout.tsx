@@ -1,11 +1,9 @@
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { setAuthExpiredHandler } from "@/services/authSession";
 import { fetchCurrentUser, hydrateAuth, logout } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { store } from "@/store/store";
 import { fetchNotifications } from "@/store/notificationSlice";
 import {
-  DarkTheme,
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
@@ -14,7 +12,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PaperProvider } from "react-native-paper";
+import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import "react-native-reanimated";
 import { Provider } from "react-redux";
 import { Toaster } from "sonner-native";
@@ -40,10 +38,9 @@ export const unstable_settings = {};
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutInner() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, hasFetchedProfile, hasHydrated, user, token } =
+  const { isAuthenticated, hasFetchedProfile, hasHydrated, token } =
     useAppSelector((s) => s.auth);
   const [isSplashAnimationDone, setSplashAnimationDone] = React.useState(false);
     
@@ -152,7 +149,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <PaperProvider>
+        <PaperProvider theme={MD3LightTheme}>
           <RootLayoutInner />
         </PaperProvider>
       </Provider>
