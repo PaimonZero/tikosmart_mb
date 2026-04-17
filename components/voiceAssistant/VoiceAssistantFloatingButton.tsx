@@ -10,7 +10,6 @@ import { usePathname, useRouter } from "expo-router";
 import {
   Mic,
   MicOff,
-  Move,
   RotateCcw,
   Send,
   Square,
@@ -46,11 +45,29 @@ const POPUP_GAP = 12;
 const TAP_MOVE_THRESHOLD = 4;
 const ALLOWED_ROLES = ["admin", "picker", "shipper"];
 
+const normalizePathname = (pathname: string) => {
+  const normalized = pathname
+    .split("?")[0]
+    .replace(/\/\([^/]+\)/g, "")
+    .replace(/\/+/g, "/")
+    .replace(/\/$/, "")
+    .toLowerCase();
+
+  return normalized || "/";
+};
+
+const ROOT_ROUTE_ROLE_MAP: Record<string, VoiceRole> = {
+  "/deliveryruns": "shipper",
+  "/delivery-runs": "shipper",
+  "/delivery-runs/deliveryrunlist": "shipper",
+  "/taskmanage": "picker",
+  "/task-manage": "picker",
+  "/task-manage/index": "picker",
+};
+
 const routeToVoiceRole = (pathname: string): VoiceRole | null => {
-  const p = pathname.toLowerCase();
-  if (p.includes("taskmanage") || p.includes("task-manage")) return "picker";
-  if (p.includes("deliveryruns") || p.includes("delivery-runs")) return "shipper";
-  return null;
+  const normalized = normalizePathname(pathname);
+  return ROOT_ROUTE_ROLE_MAP[normalized] ?? null;
 };
 
 const isAllowedRoute = (pathname: string) => routeToVoiceRole(pathname) !== null;
@@ -106,11 +123,11 @@ export default function VoiceAssistantFloatingButton() {
     : isPreparing
       ? "Chuẩn bị ghi âm..."
       : isTranscribing
-        ? "Đang nhận dạng sau khi bạn bấm Dừng..."
+        ? "Đang nhận dạng giọng nói..."
         : isListening
-          ? "Đang lắng nghe. Văn bản sẽ hiển thị sau khi bạn bấm Dừng."
+          ? "Đang lắng nghe. Văn bản sẽ hiển thị sau khi bạn bấm nút 'Dừng'."
           : isStopped
-            ? "Đã có văn bản. Bạn có thể chỉnh sửa trước khi gửi"
+            ? "Hoàn tất. Bạn có thể chỉnh sửa trước khi gửi"
             : "Chạm để nói";
 
   const allowed = useMemo(() => {
@@ -197,11 +214,25 @@ export default function VoiceAssistantFloatingButton() {
     if (["listening", "transcribing", "processing"].includes(voiceState)) return;
 
     try {
-      const permission = await Audio.requestPermissionsAsync();
-      if (permission.status !== "granted") {
+      const currentPermission = await Audio.getPermissionsAsync();
+      let granted = currentPermission.granted;
+      let grantedNow = false;
+
+      if (!granted && currentPermission.canAskAgain) {
+        const requested = await Audio.requestPermissionsAsync();
+        granted = requested.granted;
+        grantedNow = requested.granted;
+      }
+
+      if (!granted) {
         toast.error("Không thể truy cập microphone");
         setVoiceState("idle");
         return;
+      }
+
+      // iOS đôi lúc cần 1 nhịp sau khi user vừa bấm Allow lần đầu
+      if (Platform.OS === "ios" && grantedNow) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
 
       await Audio.setAudioModeAsync({
@@ -463,14 +494,14 @@ export default function VoiceAssistantFloatingButton() {
                           value={transcript}
                           onChangeText={setTranscript}
                           editable={isStopped || isProcessing || isTranscribing}
-                          placeholder="Sau khi nói, hãy bấm nút Dừng, văn bản sẽ hiển thị tại đây."
+                          placeholder="Văn bản trích xuất từ giọng nói sẽ hiển thị tại đây."
                           className="min-h-[88px] border border-slate-200 rounded-xl p-3 text-slate-900 bg-slate-50"
                           textAlignVertical="top"
                       />
 
                       {(isPreparing || isListening || isTranscribing) && (
                         <Text className="text-xs text-amber-600 mt-2">
-                          Lưu ý: Hệ thống không hiển thị real-time. Bạn cần bấm nút Dừng để nhận văn bản.
+                          Lưu ý: Ứng dụng tạm thời chưa thể hiển thị real-time. Bạn cần bấm nút 'Dừng' để hiển thị văn bản.
                         </Text>
                       )}
 
@@ -551,9 +582,6 @@ export default function VoiceAssistantFloatingButton() {
         >
           <View className="w-[58px] h-[58px] rounded-full bg-blue-600 items-center justify-center shadow-lg border border-blue-500">
             <Mic size={22} color="#fff" />
-            <View className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-900 items-center justify-center">
-              <Move size={11} color="#fff" />
-            </View>
           </View>
         </Animated.View>
       </>
