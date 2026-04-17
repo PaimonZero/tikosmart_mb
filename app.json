@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.vietcong221.tikosmart_mb",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Tikosmart cần truy cập vị trí của bạn để theo dõi hành trình giao hàng ngay cả khi ứng dụng chạy ngầm.",

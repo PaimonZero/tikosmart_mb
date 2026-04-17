@@ -16,15 +16,6 @@ export default ({ config }) => {
           apiKey: process.env.GOOGLE_MAPS_API_KEY
         }
       }
-    },
-    plugins: [
-      ...(config.plugins || []),
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": process.env.GOOGLE_MAPS_API_KEY
-        }
-      ]
-    ]
+    }
   };
 };
