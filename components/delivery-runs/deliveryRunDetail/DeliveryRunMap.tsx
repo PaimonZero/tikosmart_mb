@@ -49,7 +49,7 @@ const formatDistanceLabel = (meters: number) => {
 // Re-added with tracksViewChanges hack.
 
 // Memoized Custom Marker View
-const MapMarkerCustom = React.memo(({ type, index, title, status }: { type: string, index?: number, title: string, status?: string }) => {
+const MapMarkerCustom = React.memo(({ type, index, status }: { type: string, index?: number, status?: string }) => {
     const isOrigin = type === 'origin';
 
     // Status-based colors
@@ -84,9 +84,10 @@ const MapMarkerCustom = React.memo(({ type, index, title, status }: { type: stri
         </View>
     );
 });
+MapMarkerCustom.displayName = 'MapMarkerCustom';
 
 // Wrapper to prevent Android flickering by disabling view tracking after initial render
-const CustomMarkerWrapper = React.memo(({ marker }: { marker: any }) => {
+const CustomMarkerWrapper = React.memo(function CustomMarkerWrapper({ marker }: { marker: any }) {
     const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
 
     // If marker status updates (e.g., from pending to completed), we need to re-enable tracking temporarily so the map updates the image
@@ -110,14 +111,13 @@ const CustomMarkerWrapper = React.memo(({ marker }: { marker: any }) => {
             <MapMarkerCustom
                 type={marker.type}
                 index={marker.index}
-                title={marker.title}
                 status={marker.status}
             />
         </Marker>
     );
 });
 
-const ShipperMarker = React.memo(({ coordinate, vehicleType }: { coordinate: { latitude: number, longitude: number }, vehicleType?: string }) => {
+const ShipperMarker = React.memo(function ShipperMarker({ coordinate, vehicleType }: { coordinate: { latitude: number, longitude: number }, vehicleType?: string }) {
     const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
 
     React.useEffect(() => {
