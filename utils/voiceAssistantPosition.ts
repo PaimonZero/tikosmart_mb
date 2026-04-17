@@ -1,6 +1,6 @@
 ﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const KEY = "tikosmart_voice_assistant_position_v1";
+const KEY = "tikosmart_voice_assistant_position_v2";
 
 export interface VoiceButtonPosition {
   x: number;
