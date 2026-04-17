@@ -77,26 +77,17 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
         }
     }, [type, visible, voicePrefill]);
 
-    const pickImage = async (useCamera: boolean) => {
-        let result;
-        if (useCamera) {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-                toast.error("Cần quyền truy cập máy ảnh để chụp ảnh bằng chứng");
-                return;
-            }
-            result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ['images'],
-                allowsEditing: false,
-                quality: 0.7,
-            });
-        } else {
-            result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsEditing: false,
-                quality: 0.7,
-            });
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            toast.error("Cần quyền truy cập máy ảnh để chụp ảnh bằng chứng");
+            return;
         }
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            allowsEditing: false,
+            quality: 0.7,
+        });
 
         if (!result.canceled) {
             setEvidenceImage(result.assets[0].uri);
@@ -252,24 +243,17 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                                 </View>
                             ) : (
                                 !isReadOnly ? (
-                                    <View className="flex-row gap-3">
-                                        <TouchableOpacity
-                                            onPress={() => pickImage(true)}
-                                            disabled={isSubmitting}
-                                            className="flex-1 bg-blue-50 py-6 rounded-2xl items-center border border-dashed border-blue-200"
-                                        >
+                                    <TouchableOpacity
+                                        onPress={pickImage}
+                                        disabled={isSubmitting}
+                                        className="w-full aspect-video bg-blue-50 rounded-2xl items-center justify-center border border-dashed border-blue-200 active:bg-blue-100"
+                                    >
+                                        <View className="bg-blue-100 p-4 rounded-full mb-2">
                                             <Ionicons name="camera" size={32} color="#3B82F6" />
-                                            <Text className="text-blue-600 font-bold text-xs mt-2">Chụp ảnh</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => pickImage(false)}
-                                            disabled={isSubmitting}
-                                            className="flex-1 bg-slate-50 py-6 rounded-2xl items-center border border-dashed border-slate-200"
-                                        >
-                                            <Ionicons name="images" size={32} color="#64748B" />
-                                            <Text className="text-slate-500 font-bold text-xs mt-2">Thư viện</Text>
-                                        </TouchableOpacity>
-                                    </View>
+                                        </View>
+                                        <Text className="text-blue-600 font-bold text-sm">Chụp ảnh bằng chứng</Text>
+                                        <Text className="text-blue-400 text-[10px] mt-1">Sử dụng camera để xác nhận giao hàng</Text>
+                                    </TouchableOpacity>
                                 ) : (
                                     <View className="w-full aspect-video rounded-2xl bg-slate-50 items-center justify-center border border-slate-200 border-dashed">
                                         <Ionicons name="image-outline" size={32} color="#94A3B8" />
