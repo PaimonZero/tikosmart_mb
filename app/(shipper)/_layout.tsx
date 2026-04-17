@@ -5,6 +5,7 @@ import { HapticTab } from "@/components/haptic-tab";
 import CustomHomeHeader from "@/components/homepage/CustomHomeHeader";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppSelector } from "@/store/hooks";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function ShipperTabLayout() {
     const { isAuthenticated, hasHydrated } = useAppSelector((s) => s.auth);
@@ -37,7 +38,7 @@ export default function ShipperTabLayout() {
                 options={{
                     title: "Giao hàng",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol size={28} name="truck.fill" color={color} />
+                        <MaterialCommunityIcons name="truck-delivery" size={24} color={color} />
                     ),
                     headerShown: false,
                 }}

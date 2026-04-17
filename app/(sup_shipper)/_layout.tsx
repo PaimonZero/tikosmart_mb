@@ -48,7 +48,7 @@ export default function SupShipperTabLayout() {
                 options={{
                     title: "Giao hàng",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol size={28} name="truck.fill" color={color} />
+                        <Feather name="truck" size={24} color={color} />
                     ),
                     headerShown: false,
                 }}
