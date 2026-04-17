@@ -101,6 +101,18 @@ export default function VoiceAssistantFloatingButton() {
   const isStopped = voiceState === "stopped";
   const isProcessing = voiceState === "processing";
 
+  const statusMessage = isProcessing
+    ? "Đang xử lý..."
+    : isPreparing
+      ? "Chuẩn bị ghi âm..."
+      : isTranscribing
+        ? "Đang nhận dạng sau khi bạn bấm Dừng..."
+        : isListening
+          ? "Đang lắng nghe. Văn bản sẽ hiển thị sau khi bạn bấm Dừng."
+          : isStopped
+            ? "Đã có văn bản. Bạn có thể chỉnh sửa trước khi gửi"
+            : "Chạm để nói";
+
   const allowed = useMemo(() => {
     const routeAllowed = isAllowedRoute(pathname || "");
     const roleAllowed = ALLOWED_ROLES.includes(String(currentRole || ""));
@@ -451,23 +463,19 @@ export default function VoiceAssistantFloatingButton() {
                           value={transcript}
                           onChangeText={setTranscript}
                           editable={isStopped || isProcessing || isTranscribing}
-                          placeholder="Nội dung nhận dạng sẽ hiển thị ở đây.."
+                          placeholder="Sau khi nói, hãy bấm nút Dừng, văn bản sẽ hiển thị tại đây."
                           className="min-h-[88px] border border-slate-200 rounded-xl p-3 text-slate-900 bg-slate-50"
                           textAlignVertical="top"
                       />
 
+                      {(isPreparing || isListening || isTranscribing) && (
+                        <Text className="text-xs text-amber-600 mt-2">
+                          Lưu ý: Hệ thống không hiển thị real-time. Bạn cần bấm nút Dừng để nhận văn bản.
+                        </Text>
+                      )}
+
                       <Text className="text-xs text-slate-500 mt-2">
-                        {isProcessing
-                            ? "Đang xử lý..."
-                            : isPreparing
-                                ? "Chuẩn bị ghi âm..."
-                                : isTranscribing
-                                    ? "Đang nhận dạng giọng nói..."
-                                    : isListening
-                                        ? "Đang lắng nghe..."
-                                        : isStopped
-                                            ? "Bạn có thể chỉnh sửa lại nội dung"
-                                            : "Chạm để nói"}
+                        {statusMessage}
                       </Text>
 
                       <View className="items-center mt-4">
