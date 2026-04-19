@@ -165,7 +165,6 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
             }
 
             setModalVisible(false);
-            onRefresh();
             showAlert("Thành công", `Đã ${modalType === 'complete' ? 'hoàn thành' : 'hủy'} đơn hàng này.`);
         } catch (err: any) {
             setModalVisible(false);

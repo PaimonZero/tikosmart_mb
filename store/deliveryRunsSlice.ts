@@ -1,4 +1,8 @@
-import { createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createEntityAdapter,
+  createSlice,
+} from "@reduxjs/toolkit";
 import {
   cancelDeliveryRunOrder as cancelDeliveryRunOrderAPI,
   CancelDeliveryRunOrderData,
@@ -79,7 +83,12 @@ const initialState = deliveryRunsAdapter.getInitialState({
   orderReopenError: null as string | null,
   summary: { total: 0, inProgress: 0, completed: 0 } as DeliveryRunSummary,
   // Real-time shipper tracking
-  shipperLocation: null as { lat: number; lng: number; lastUpdate: string; vehicle_type?: string } | null,
+  shipperLocation: null as {
+    lat: number;
+    lng: number;
+    lastUpdate: string;
+    vehicle_type?: string;
+  } | null,
 });
 
 export type DeliveryRunsState = typeof initialState;
@@ -155,10 +164,7 @@ export const deleteDeliveryRun = createAsyncThunk(
 // Bắt đầu delivery run
 export const startDeliveryRun = createAsyncThunk(
   "deliveryRuns/startDeliveryRun",
-  async (
-    { id, data }: { id: string; data: any },
-    { rejectWithValue },
-  ) => {
+  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
     try {
       const response = await startDeliveryRunAPI(id, data);
       return response.data;
@@ -353,7 +359,9 @@ const deliveryRunsSlice = createSlice({
       deliveryRunsAdapter.upsertOne(state, action.payload);
       if (
         state.deliveryRunById &&
-        (state.deliveryRunById as any).id === action.payload.id
+        (state.deliveryRunById as any).id != null &&
+        action.payload?.id != null &&
+        String((state.deliveryRunById as any).id) === String(action.payload.id)
       ) {
         state.deliveryRunById = { ...state.deliveryRunById, ...action.payload };
       }
@@ -365,20 +373,22 @@ const deliveryRunsSlice = createSlice({
       }
     },
     updateShipperLocation: (state, action) => {
-       const lat = Number(action.payload.lat);
-       const lng = Number(action.payload.lng);
-       
-       if (Number.isFinite(lat) && Number.isFinite(lng)) {
-         state.shipperLocation = {
-            lat,
-            lng,
-            lastUpdate: action.payload.timestamp || new Date().toISOString(),
-            vehicle_type: action.payload.vehicle_type || (state.deliveryRunById as any)?.vehicle_type
-         };
-       }
+      const lat = Number(action.payload.lat);
+      const lng = Number(action.payload.lng);
+
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        state.shipperLocation = {
+          lat,
+          lng,
+          lastUpdate: action.payload.timestamp || new Date().toISOString(),
+          vehicle_type:
+            action.payload.vehicle_type ||
+            (state.deliveryRunById as any)?.vehicle_type,
+        };
+      }
     },
     clearShipperLocation: (state) => {
-       state.shipperLocation = null;
+      state.shipperLocation = null;
     },
   },
   extraReducers: (builder) => {
@@ -417,14 +427,15 @@ const deliveryRunsSlice = createSlice({
         deliveryRunsAdapter.upsertOne(state, action.payload.data);
 
         // Sync shipper location from the fetched detail if available
-        const { shipperLastLat, shipperLastLng, status } = action.payload.data || {};
-        if (status === 'in_progress' && shipperLastLat && shipperLastLng) {
-           state.shipperLocation = {
-              lat: Number(shipperLastLat),
-              lng: Number(shipperLastLng),
-              lastUpdate: new Date().toISOString(),
-              vehicle_type: action.payload.data.vehicle_type
-           };
+        const { shipperLastLat, shipperLastLng, status } =
+          action.payload.data || {};
+        if (status === "in_progress" && shipperLastLat && shipperLastLng) {
+          state.shipperLocation = {
+            lat: Number(shipperLastLat),
+            lng: Number(shipperLastLng),
+            lastUpdate: new Date().toISOString(),
+            vehicle_type: action.payload.data.vehicle_type,
+          };
         }
       })
       .addCase(fetchDeliveryRunById.rejected, (state, action) => {
@@ -489,12 +500,12 @@ const deliveryRunsSlice = createSlice({
         // Also sync location if provided in the start response
         const { shipperLastLat, shipperLastLng } = action.payload.data || {};
         if (shipperLastLat && shipperLastLng) {
-           state.shipperLocation = {
-              lat: Number(shipperLastLat),
-              lng: Number(shipperLastLng),
-              lastUpdate: new Date().toISOString(),
-              vehicle_type: action.payload.data.vehicle_type
-           };
+          state.shipperLocation = {
+            lat: Number(shipperLastLat),
+            lng: Number(shipperLastLng),
+            lastUpdate: new Date().toISOString(),
+            vehicle_type: action.payload.data.vehicle_type,
+          };
         }
       })
       .addCase(startDeliveryRun.rejected, (state, action) => {
@@ -603,7 +614,7 @@ export const {
   updateDeliveryRunRealtime,
   deleteDeliveryRunRealtime,
   updateShipperLocation,
-  clearShipperLocation
+  clearShipperLocation,
 } = deliveryRunsSlice.actions;
 
 export const deliveryRunsSelectors = deliveryRunsAdapter.getSelectors(
