@@ -40,7 +40,11 @@ const useDeliveryEvents = () => {
       const idStr = currentDetailsRunId ? String(currentDetailsRunId) : null;
       const targetIdStr = targetRunId ? String(targetRunId) : null;
       if (idStr && targetIdStr && idStr === targetIdStr) {
-         void dispatch(fetchDeliveryRunById(currentDetailsRunId));
+         // Trì hoãn việc fetch dữ liệu khoảng 500ms để đảm bảo các animation (nếu có) đã hoàn tất
+         // Thay thế InteractionManager.runAfterInteractions đang bị deprecated
+         setTimeout(() => {
+            void dispatch(fetchDeliveryRunById(currentDetailsRunId));
+         }, 500);
       }
     };
 

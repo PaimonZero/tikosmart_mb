@@ -250,10 +250,6 @@ const useGlobalTracking = () => {
         } catch (posErr) {
           console.warn("[GlobalTracking] Initial position failed:", posErr);
         }
-
-        console.log(
-          `[GlobalTracking] ✅ Auto-started tracking for run ${runId}`,
-        );
       } catch (err: any) {
         console.error("[GlobalTracking] Start error:", err.message);
       }
@@ -294,9 +290,6 @@ const useGlobalTracking = () => {
       } else {
         // No active run → stop tracking
         if (activeRunIdRef.current) {
-          console.log(
-            "[GlobalTracking] No active run found, stopping tracking",
-          );
           await stopAllTracking();
         }
       }
