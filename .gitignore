@@ -41,3 +41,13 @@ app-example
 # generated native folders
 /ios
 /android
+.env
+
+# JetBrains
+.idea/
+
+# agent
+.agent/
+
+# Package-lock.json
+package-lock.json
