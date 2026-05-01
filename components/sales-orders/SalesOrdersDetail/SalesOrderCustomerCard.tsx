@@ -22,8 +22,8 @@ export const SalesOrderCustomerCard = ({ customerName, phone, address }: SalesOr
                 <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
                     <Ionicons name="person" size={20} color="#2563EB" />
                 </View>
-                <View>
-                    <Text className="text-gray-800 font-bold text-base">{customerName || "—"}</Text>
+                <View className="flex-1">
+                    <Text className="text-gray-800 font-bold text-base flex-shrink flex-wrap">{customerName || "—"}</Text>
                     <Text className="text-gray-400 text-xs">Khách hàng</Text>
                 </View>
             </View>
