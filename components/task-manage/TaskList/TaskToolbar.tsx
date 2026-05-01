@@ -5,9 +5,9 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 const STATUS_OPTIONS = [
     { label: 'Tất cả', value: '' },
     { label: 'Đã phân công', value: 'assigned' },
-    { label: 'Đang lấy hàng', value: 'in_progress' },
+    { label: 'Đang soạn', value: 'in_progress' },
     { label: 'Chờ duyệt', value: 'pending_review' },
-    { label: 'Hoàn thành', value: 'completed' },
+    { label: 'Hoàn tất', value: 'completed' },
     { label: 'Đã huỷ', value: 'cancelled' },
 ];
 

@@ -12,9 +12,9 @@ const COLOR_MAP: Record<string, { bg: string; text: string; iconColor: string }>
 
 const LABEL_MAP: Record<string, string> = {
     assigned: "Đã phân công",
-    in_progress: "Đang lấy hàng",
-    pending_review: "Chờ kiểm tra",
-    completed: "Hoàn thành",
+    in_progress: "Đang soạn",
+    pending_review: "Chờ duyệt",
+    completed: "Hoàn tất",
     cancelled: "Đã huỷ",
 };
 

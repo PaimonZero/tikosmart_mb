@@ -31,7 +31,7 @@ export default function TaskTimeline({ taskDetail, isCancelled }: TaskTimelinePr
 
     const steps = [
         { key: "assigned", label: "Đã phân công", time: taskDetail.createdAt },
-        { key: "in_progress", label: "Đang làm", time: taskDetail.startedAt },
+        { key: "in_progress", label: "Đang soạn", time: taskDetail.startedAt },
         { key: "pending_review", label: "Chờ duyệt", time: null },
         { key: "completed", label: "Hoàn tất", time: taskDetail.completedAt },
     ];
@@ -105,7 +105,7 @@ export default function TaskTimeline({ taskDetail, isCancelled }: TaskTimelinePr
                         const isPassed = index < flowIndex;
 
                         return (
-                            <View key={step.key} className="items-center" style={{ width: 130 }}>
+                            <View key={step.key} className="items-center" style={{ width: 140 }}>
                                 {/* Line & Dot Container */}
                                 <View className="flex-row items-center w-full mb-3">
                                     {/* Left Line */}
@@ -125,7 +125,7 @@ export default function TaskTimeline({ taskDetail, isCancelled }: TaskTimelinePr
                                             <CircleDashed color="#d1d5db" size={18} />
                                         )}
                                     </View>
-
+                                    
                                     {/* Right Line */}
                                     <View 
                                         className={`flex-1 h-[3px] rounded-full ${isLast ? 'bg-transparent' : (isPassed ? 'bg-green-500' : 'bg-gray-100')}`} 
@@ -133,10 +133,13 @@ export default function TaskTimeline({ taskDetail, isCancelled }: TaskTimelinePr
                                 </View>
 
                                 {/* Text labels */}
-                                <View className="items-center px-1">
-                                    <Text className={`text-xs text-center font-black uppercase tracking-tighter mb-1 ${
-                                        isCurrent ? 'text-blue-600' : isDone ? 'text-gray-900' : 'text-gray-400'
-                                    }`}>
+                                <View className="items-center px-2">
+                                    <Text 
+                                        numberOfLines={2}
+                                        className={`text-[11px] text-center font-black uppercase mb-1 ${
+                                            isCurrent ? 'text-blue-600' : isDone ? 'text-gray-900' : 'text-gray-400'
+                                        }`}
+                                    >
                                         {step.label}
                                     </Text>
                                     <Text className={`text-[10px] text-center font-bold ${
