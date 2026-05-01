@@ -33,6 +33,24 @@ export default function TaskInfoCards({ taskDetail, orderDetail, canEdit, onEdit
         };
     });
 
+    const renderFormattedText = (text: string) => {
+        if (!text || text.trim() === "") return <Text className="italic text-gray-400">Không có</Text>;
+        
+        // Split by **text** markers
+        const parts = text.split(/(\*\*.*?\*\*)/g);
+        
+        return parts.map((part, index) => {
+            if (part.startsWith("**") && part.endsWith("**")) {
+                return (
+                    <Text key={index} className="font-extrabold text-black">
+                        {part.slice(2, -2)}
+                    </Text>
+                );
+            }
+            return part;
+        });
+    };
+
     if (!taskDetail) return null;
 
     return (
@@ -107,7 +125,7 @@ export default function TaskInfoCards({ taskDetail, orderDetail, canEdit, onEdit
                                 <Text className="text-sm text-blue-700 mb-2 font-bold flex-row items-center">
                                     <NotepadText size={16} color="#3b82f6" /> Ghi chú nhiệm vụ:
                                 </Text>
-                                <Text className="text-sm text-gray-800 leading-6">{taskDetail.note}</Text>
+                                <Text className="text-sm text-gray-800 leading-6">{renderFormattedText(taskDetail.note)}</Text>
                             </View>
                         )}
                     </Animated.View>
@@ -182,7 +200,7 @@ export default function TaskInfoCards({ taskDetail, orderDetail, canEdit, onEdit
                                         <Text className="text-sm text-amber-700 font-bold mb-2 flex-row items-center">
                                             <NotepadText size={16} color="#f59e0b" /> Ghi chú đơn hàng:
                                         </Text>
-                                        <Text className="text-sm text-amber-900 leading-6">{orderDetail.note}</Text>
+                                        <Text className="text-sm text-amber-900 leading-6">{renderFormattedText(orderDetail.note)}</Text>
                                     </View>
                                 )}
                             </View>
