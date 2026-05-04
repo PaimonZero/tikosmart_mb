@@ -14,6 +14,7 @@ interface AiValidationModalProps {
   onCancel: () => void;
   onConfirm: () => void;
   invalidImages: AiInvalidDetail[];
+  context?: 'picking' | 'delivery';
 }
 
 const AiValidationModal: React.FC<AiValidationModalProps> = ({
@@ -21,6 +22,7 @@ const AiValidationModal: React.FC<AiValidationModalProps> = ({
   onCancel,
   onConfirm,
   invalidImages = [],
+  context = 'picking',
 }) => {
   if (!visible) return null;
 
@@ -63,7 +65,7 @@ const AiValidationModal: React.FC<AiValidationModalProps> = ({
           <View className="px-6 pb-8">
             <Text className="text-2xl font-bold text-center text-gray-900 mb-2">Cảnh báo từ AI</Text>
             <Text className="text-gray-500 text-center text-sm mb-6 px-4">
-              Hệ thống AI nhận định một số hình ảnh có thể không phải là ảnh soạn hàng hợp lệ.
+              Hệ thống AI nhận định một số hình ảnh có thể không phải là ảnh {context === 'delivery' ? 'minh chứng giao hàng' : 'soạn hàng'} hợp lệ.
             </Text>
 
             {invalidImages.length > 0 && (

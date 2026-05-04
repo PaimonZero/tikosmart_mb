@@ -15,6 +15,7 @@ import { useAppDispatch } from "@/store/hooks";
 import { updateTaskItemByPicker } from "@/store/taskSlice";
 import { toast } from "sonner-native";
 import { verifyPickingImages } from "@/services/aiVisionService";
+import { getSystemSettings, SystemSetting } from "@/services/systemSettingsService";
 import AiValidationModal from "@/components/common/AiValidationModal";
 
 type ImageType = "preEvd" | "postEvd" | null;
@@ -192,17 +193,26 @@ export default function UpdateTaskItemScreen() {
 
             if (allUrls.length > 0) {
                 try {
-                    const verifyRes = await verifyPickingImages(allUrls);
-                    const resultData = verifyRes?.data?.data || verifyRes?.data || { isValid: true };
-                    const { isValid, details } = resultData;
+                    // Check if AI picking is enabled in system settings
+                    const settingsRes = await getSystemSettings();
+                    const settings: SystemSetting[] = settingsRes?.data?.data || [];
+                    const isAiEnabled = settings.find(s => s.setting_key === 'ai_picking_enabled')?.setting_value === 'true';
 
-                    if (isValid === false) {
-                        const invalidImages = (details || []).filter((d: any) => d.isValid === false);
-                        setAiInvalidDetails(invalidImages);
-                        setPendingUpdateFn(() => () => executeSave(finalPreEvdUris, finalPostEvdUris));
-                        setAiModalVisible(true);
-                        setIsSaving(false);
-                        return;
+                    if (isAiEnabled) {
+                        const verifyRes = await verifyPickingImages(allUrls, 'picking');
+                        const resultData = verifyRes?.data?.data || verifyRes?.data || { isValid: true };
+                        const { isValid, details } = resultData;
+
+                        if (isValid === false) {
+                            const invalidImages = (details || []).filter((d: any) => d.isValid === false);
+                            setAiInvalidDetails(invalidImages);
+                            setPendingUpdateFn(() => () => executeSave(finalPreEvdUris, finalPostEvdUris));
+                            setAiModalVisible(true);
+                            setIsSaving(false);
+                            return;
+                        }
+                    } else {
+                        console.log("AI Picking is disabled by Admin, skipping verification.");
                     }
                 } catch (error) {
                     console.error("Lỗi khi xác thực ảnh bằng AI:", error);
@@ -332,6 +342,7 @@ export default function UpdateTaskItemScreen() {
             <AiValidationModal
                 visible={aiModalVisible}
                 invalidImages={aiInvalidDetails}
+                context="picking"
                 onCancel={() => {
                     setAiModalVisible(false);
                     setIsSaving(false);
