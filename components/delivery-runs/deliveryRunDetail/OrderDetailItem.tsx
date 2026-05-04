@@ -283,7 +283,7 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                     {/* Address & Phone */}
                     <View className="flex-col mb-1">
                         <View className="flex-row items-start mb-2.5">
-                            <Ionicons name="location" size={18} color="#475569" className="mt-0.5" />
+                            <Ionicons name="location" size={18} color="#475569" />
                             <Text className="text-slate-800 text-sm ml-1.5 flex-1 font-semibold leading-5">
                                 {order.customer?.address || "Không rõ địa chỉ"}
                             </Text>
@@ -312,7 +312,7 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                         )}
                         {!!order.customer?.note && (
                             <View className="flex-row items-start bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-1.5">
-                                <Ionicons name="warning" size={16} color="#D97706" className="mt-0.5" />
+                                <Ionicons name="warning" size={16} color="#D97706" />
                                 <Text className="text-amber-900 text-sm leading-5 font-medium ml-1.5 flex-1">
                                     {order.customer.note}
                                 </Text>

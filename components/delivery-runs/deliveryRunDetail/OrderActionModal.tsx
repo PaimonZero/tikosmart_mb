@@ -66,6 +66,7 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
 
             setEvidenceImage(order.evdUrl || null);
             setIsSubmitting(false);
+            setCaptureLocation(null);
         }
     }, [visible, type, order]);
 
@@ -309,7 +310,10 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                                     </TouchableOpacity>
                                     {!isSubmitting && !isReadOnly && (
                                         <TouchableOpacity
-                                            onPress={() => setEvidenceImage(null)}
+                                            onPress={() => {
+                                                setEvidenceImage(null);
+                                                setCaptureLocation(null);
+                                            }}
                                             className="absolute top-2 right-2 bg-black/50 w-8 h-8 rounded-full items-center justify-center"
                                         >
                                             <Ionicons name="close" size={20} color="white" />
@@ -379,10 +383,26 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                 onCancel={() => {
                     setAiModalVisible(false);
                     setIsSubmitting(false);
+                    setPendingSubmitFn(null);
+                    setAiInvalidDetails([]);
+                    setCaptureLocation(null);
                 }}
-                onConfirm={() => {
+                onConfirm={async () => {
+                    const nextSubmitFn = pendingSubmitFn;
                     setAiModalVisible(false);
-                    pendingSubmitFn?.();
+                    setPendingSubmitFn(null);
+                    setAiInvalidDetails([]);
+                    
+                    if (nextSubmitFn) {
+                        setIsSubmitting(true);
+                        try {
+                            await nextSubmitFn();
+                        } catch (err) {
+                            console.error("AI Bypass submit failed:", err);
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    }
                 }}
             />
 

@@ -27,7 +27,7 @@ export const getStatusStyles = (status: string) => {
                 text: "text-blue-600",
                 dot: "bg-blue-500",
                 border: "border-blue-200",
-                label: STATUS_MAP.assigned.text,
+                label: status === "pending" ? STATUS_MAP.pending.text : STATUS_MAP.assigned.text,
             };
         case "in_progress":
             return {

@@ -184,6 +184,7 @@ export default function UpdateTaskItemScreen() {
                     toast.error("Lỗi", { description: error?.message || "Lỗi lưu cập nhật.", duration: 2000 });
                 } finally {
                     setIsSaving(false);
+                    setSaveStatus("idle");
                 }
             };
 
@@ -347,10 +348,21 @@ export default function UpdateTaskItemScreen() {
                     setAiModalVisible(false);
                     setIsSaving(false);
                     setSaveStatus("idle");
+                    setPendingUpdateFn(null);
                 }}
-                onConfirm={() => {
+                onConfirm={async () => {
+                    const nextUpdateFn = pendingUpdateFn;
                     setAiModalVisible(false);
-                    pendingUpdateFn?.();
+                    setPendingUpdateFn(null);
+                    
+                    if (nextUpdateFn) {
+                        setIsSaving(true);
+                        try {
+                            await nextUpdateFn();
+                        } finally {
+                            // executeSave inside nextUpdateFn already handles setIsSaving(false) and setSaveStatus("idle")
+                        }
+                    }
                 }}
             />
         </SafeAreaView>
