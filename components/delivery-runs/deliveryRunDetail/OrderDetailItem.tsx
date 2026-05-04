@@ -235,15 +235,20 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
         <View className={clsx("flex-row items-stretch", !isLast && "mb-4")}>
             {/* Timeline Connector */}
             <View className="items-center mr-3 mt-1.5">
-                <View className={clsx("w-7 h-7 rounded-full items-center justify-center border-2",
-                    order.status === 'in_progress' ? "bg-blue-50 border-blue-500" :
-                        order.status === 'completed' ? "bg-green-50 border-green-500" : "bg-slate-50 border-slate-300"
+                <View className={clsx(
+                    "w-7 h-7 rounded-full items-center justify-center border-2",
+                    order.status === 'in_progress' ? "bg-blue-600 border-blue-600" :
+                    order.status === 'completed' ? "bg-green-50 border-green-500" : 
+                    (order.status === 'cancelled' || order.status === 'failed') ? "bg-red-50 border-red-200" :
+                    "bg-slate-50 border-slate-300"
                 )}>
                     {order.status === 'completed' ? (
                         <Ionicons name="checkmark" size={16} color="#10B981" />
+                    ) : (order.status === 'cancelled' || order.status === 'failed') ? (
+                        <Ionicons name="close" size={16} color="#EF4444" />
                     ) : (
                         <Text className={clsx("font-bold text-xs",
-                            order.status === 'in_progress' ? "text-blue-600" : "text-slate-500"
+                            order.status === 'in_progress' ? "text-white" : "text-slate-500"
                         )}>{index + 1}</Text>
                     )}
                 </View>
@@ -255,7 +260,7 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                 activeOpacity={0.7}
                 onPress={() => handleOpenModal('complete')}
                 className={clsx("flex-1 bg-white rounded-2xl border shadow-sm",
-                    order.status === 'in_progress' ? 'border-blue-200 shadow-blue-100/50' : 'border-slate-100'
+                    order.status === 'in_progress' ? 'border-blue-200 shadow-blue-100' : 'border-slate-100'
                 )}
             >
                 <View className="p-3.5 pb-3">
@@ -278,7 +283,7 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                     {/* Address & Phone */}
                     <View className="flex-col mb-1">
                         <View className="flex-row items-start mb-2.5">
-                            <Ionicons name="location" size={18} color="#475569" style={{ marginTop: 2 }} />
+                            <Ionicons name="location" size={18} color="#475569" />
                             <Text className="text-slate-800 text-sm ml-1.5 flex-1 font-semibold leading-5">
                                 {order.customer?.address || "Không rõ địa chỉ"}
                             </Text>
@@ -306,8 +311,8 @@ export default function OrderDetailItem({ order, index, isLast, runStatus, onRef
                             </View>
                         )}
                         {!!order.customer?.note && (
-                            <View className="flex-row items-start bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/60 mt-1.5">
-                                <Ionicons name="warning" size={16} color="#D97706" style={{ marginTop: 1 }}/>
+                            <View className="flex-row items-start bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-1.5">
+                                <Ionicons name="warning" size={16} color="#D97706" />
                                 <Text className="text-amber-900 text-sm leading-5 font-medium ml-1.5 flex-1">
                                     {order.customer.note}
                                 </Text>
