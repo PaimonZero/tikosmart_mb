@@ -29,6 +29,7 @@ import usePreparationEvents from "@/hooks/socket-events/usePreparationEvents";
 import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
 import useDeliveryEvents from "@/hooks/socket-events/useDeliveryEvents";
 import useGlobalTracking from "@/hooks/useGlobalTracking";
+import useSessionGuard from "@/hooks/useSessionGuard";
 import "@/utils/locationTask";
 import VoiceAssistantFloatingButton from "@/components/voiceAssistant/VoiceAssistantFloatingButton";
 
@@ -56,6 +57,9 @@ function NavigationContent() {
   
   // Global GPS tracking (auto-starts when shipper has active run)
   useGlobalTracking();
+  
+  // Session guard: lắng nghe force_logout event
+  useSessionGuard();
   
   // Subscribe to basic rooms
   useSubscribeRooms([
