@@ -15,6 +15,7 @@ const apiClient = axios.create({
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
+    "X-Device-Type": "mobile", // Phân biệt mobile vs web cho backend
   },
 });
 
