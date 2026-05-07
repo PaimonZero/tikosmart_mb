@@ -30,7 +30,7 @@ export default function PaymentStatusPie() {
     if (loading) {
         return (
             <View style={styles.card}>
-                <Text style={styles.title}>Trạng thái thanh toán</Text>
+                <Text style={styles.title}>Tỷ lệ Thu / Chi</Text>
                 <View style={styles.center}><ActivityIndicator size="small" color="#1890ff" /></View>
             </View>
         );
@@ -39,13 +39,19 @@ export default function PaymentStatusPie() {
     if (!data.length) {
         return (
             <View style={styles.card}>
-                <Text style={styles.title}>Trạng thái thanh toán</Text>
+                <Text style={styles.title}>Tỷ lệ Thu / Chi</Text>
                 <View style={styles.center}><Text style={styles.empty}>Không có dữ liệu</Text></View>
             </View>
         );
     }
 
     const total = data.reduce((s, d) => s + d.value, 0);
+
+    const formatMoney = (val: number) => {
+        if (val >= 1000000000) return `${(val / 1000000000).toFixed(2)} Tỷ`;
+        if (val >= 1000000) return `${(val / 1000000).toFixed(2)} Tr`;
+        return val.toLocaleString("vi-VN");
+    };
 
     const pieData = data.map((d) => ({
         value: d.value,
@@ -58,7 +64,7 @@ export default function PaymentStatusPie() {
 
     return (
         <View style={styles.card}>
-            <Text style={styles.title}>Trạng thái thanh toán</Text>
+            <Text style={styles.title}>Tỷ lệ Thu / Chi</Text>
             <View style={{ alignItems: "center", marginBottom: 16 }}>
                 <PieChart
                     data={pieData}
@@ -70,7 +76,7 @@ export default function PaymentStatusPie() {
                     textSize={11}
                     centerLabelComponent={() => (
                         <View style={{ alignItems: "center" }}>
-                            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1a1a2e" }}>{total}</Text>
+                            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1a1a2e" }}>{formatMoney(total)}</Text>
                             <Text style={{ fontSize: 10, color: "#8c8c8c" }}>tổng</Text>
                         </View>
                     )}
@@ -80,7 +86,7 @@ export default function PaymentStatusPie() {
                 {data.map((item) => (
                     <View key={item.type} style={styles.legendRow}>
                         <View style={[styles.dot, { backgroundColor: item.color }]} />
-                        <Text style={styles.legendText}>{item.type}: {item.value}</Text>
+                        <Text style={styles.legendText}>{item.type}: {formatMoney(item.value)}</Text>
                     </View>
                 ))}
             </View>

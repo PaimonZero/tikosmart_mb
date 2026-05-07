@@ -83,14 +83,14 @@ export default function AdminDashboard() {
 
             <OrderStatusPieChart />
 
-            <Button
-                mode="contained"
-                onPress={() => router.push("/(admin)/userManage")}
-                style={styles.button}
-                icon="account-group"
-            >
-                Quản lý người dùng
-            </Button>
+            {/*<Button*/}
+            {/*    mode="contained"*/}
+            {/*    onPress={() => router.push("/(admin)/userManage")}*/}
+            {/*    style={styles.button}*/}
+            {/*    icon="account-group"*/}
+            {/*>*/}
+            {/*    Quản lý người dùng*/}
+            {/*</Button>*/}
         </ScrollView>
     );
 }

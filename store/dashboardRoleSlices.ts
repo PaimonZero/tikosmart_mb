@@ -40,17 +40,19 @@ export const getPaymentStatusData = async () => {
     try {
         const res = await DashboardService.getCustomerTransactions();
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const statusMap: Record<string, { label: string; color: string }> = {
-                paid: { label: "Đã thanh toán", color: "#52c41a" },
-                pending: { label: "Chờ thanh toán", color: "#faad14" },
-                cancelled: { label: "Đã hủy", color: "#f5222d" },
-                refunded: { label: "Hoàn tiền", color: "#722ed1" },
-            };
-            return res.data.map((item: any) => ({
-                type: statusMap[item.status]?.label || item.status,
-                value: item.count || item.totalAmount || 0,
-                color: statusMap[item.status]?.color || "#8c8c8c",
-            }));
+            let totalIn = 0;
+            let totalOut = 0;
+            
+            res.data.forEach((item: any) => {
+                totalIn += item.totalIn || 0;
+                totalOut += item.totalOut || 0;
+            });
+
+            const result = [];
+            if (totalIn > 0) result.push({ type: "Tổng thu", value: totalIn, color: "#52c41a" });
+            if (totalOut > 0) result.push({ type: "Tổng chi", value: totalOut, color: "#f5222d" });
+            
+            return result;
         }
         throw new Error("Invalid");
     } catch {
