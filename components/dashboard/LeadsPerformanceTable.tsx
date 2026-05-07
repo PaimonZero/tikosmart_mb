@@ -1,5 +1,6 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import DashboardService from "@/services/dashboardService";
 
 interface LeadPerformance {
     key: number;
@@ -10,15 +11,6 @@ interface LeadPerformance {
     efficiency: number;
 }
 
-const mockLeadsPerformance: LeadPerformance[] = [
-    { key: 1, leader: "Nguyễn A", group: "Soạn", inProgress: 25, completed: 200, efficiency: 89 },
-    { key: 2, leader: "Trần B", group: "Giao", inProgress: 18, completed: 170, efficiency: 92 },
-    { key: 3, leader: "Phạm C", group: "Soạn", inProgress: 30, completed: 210, efficiency: 85 },
-    { key: 4, leader: "Lê D", group: "Giao", inProgress: 15, completed: 160, efficiency: 94 },
-    { key: 5, leader: "Hoàng E", group: "Soạn", inProgress: 22, completed: 180, efficiency: 87 },
-    { key: 6, leader: "Vũ F", group: "Giao", inProgress: 20, completed: 175, efficiency: 90 },
-];
-
 const getEfficiencyColor = (pct: number) => {
     if (pct >= 90) return { bg: "#52c41a", text: "#fff" };
     if (pct >= 80) return { bg: "#bae637", text: "#000" };
@@ -27,7 +19,54 @@ const getEfficiencyColor = (pct: number) => {
 };
 
 export default function LeadsPerformanceTable() {
-    const data = mockLeadsPerformance;
+    const [data, setData] = useState<LeadPerformance[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await DashboardService.getPickerProgress();
+                if (res.success && Array.isArray(res.data)) {
+                    const mapped = res.data.map((item: any, index: number) => {
+                        const total = (item.completed || 0) + (item.inProgress || 0) + (item.cancelled || 0);
+                        const efficiency = total > 0 ? Math.round(((item.completed || 0) / total) * 100) : 0;
+                        return {
+                            key: index + 1,
+                            leader: item.pickerName || item.name || `NV ${index + 1}`,
+                            group: item.group || "Soạn",
+                            inProgress: item.inProgress || 0,
+                            completed: item.completed || 0,
+                            efficiency,
+                        };
+                    });
+                    setData(mapped);
+                }
+            } catch {
+                setData([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    if (loading) {
+        return (
+            <View style={styles.card}>
+                <Text style={styles.title}>Hiệu suất theo nhân viên</Text>
+                <View style={styles.center}><ActivityIndicator size="small" color="#1890ff" /></View>
+            </View>
+        );
+    }
+
+    if (!data.length) {
+        return (
+            <View style={styles.card}>
+                <Text style={styles.title}>Hiệu suất theo nhân viên</Text>
+                <View style={styles.center}><Text style={styles.empty}>Không có dữ liệu</Text></View>
+            </View>
+        );
+    }
 
     const renderItem = ({ item, index }: { item: LeadPerformance; index: number }) => {
         const effColor = getEfficiencyColor(item.efficiency);
@@ -60,7 +99,7 @@ export default function LeadsPerformanceTable() {
 
     return (
         <View style={styles.card}>
-            <Text style={styles.title}>Hiệu suất theo trưởng nhóm</Text>
+            <Text style={styles.title}>Hiệu suất theo nhân viên</Text>
             <FlatList
                 data={data}
                 renderItem={renderItem}
@@ -83,6 +122,8 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     title: { fontSize: 15, fontWeight: "700", marginBottom: 12, color: "#1a1a2e" },
+    center: { height: 100, justifyContent: "center", alignItems: "center" },
+    empty: { color: "#999", fontSize: 13 },
     row: {
         flexDirection: "row",
         alignItems: "center",

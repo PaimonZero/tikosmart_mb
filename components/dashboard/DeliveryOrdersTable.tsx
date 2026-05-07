@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, FlatList } from "react-native";
+import DashboardService from "@/services/dashboardService";
 
 interface DeliveryOrder {
     key: string;
     code: string;
-    customer: string;
+    shipper: string;
+    supervisor: string;
     status: string;
-    address: string;
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -14,27 +15,42 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
     "Đang giao": { bg: "#e6f7ff", text: "#1890ff" },
     "Hoàn thành": { bg: "#f6ffed", text: "#52c41a" },
     "Giao thất bại": { bg: "#fff1f0", text: "#f5222d" },
+    "Đã hủy": { bg: "#fff1f0", text: "#f5222d" },
 };
 
-// Mock data — chờ API riêng cho shipper
-const mockDeliveryOrders: DeliveryOrder[] = [
-    { key: "1", code: "#DLV-1001", customer: "Nguyễn Văn A", status: "Đang giao", address: "123 Lê Lợi, Q.1" },
-    { key: "2", code: "#DLV-1002", customer: "Trần Thị B", status: "Đã phân công", address: "456 Nguyễn Huệ, Q.1" },
-    { key: "3", code: "#DLV-1003", customer: "Lê Văn C", status: "Hoàn thành", address: "789 Hai Bà Trưng, Q.3" },
-    { key: "4", code: "#DLV-1004", customer: "Phạm Văn D", status: "Đang giao", address: "101 Võ Văn Tần, Q.3" },
-    { key: "5", code: "#DLV-1005", customer: "Hoàng Thị E", status: "Giao thất bại", address: "202 Cách Mạng Tháng 8, Q.10" },
-];
+const STATUS_MAP: Record<string, string> = {
+    assigned: "Đã phân công",
+    in_progress: "Đang giao",
+    completed: "Hoàn thành",
+    cancelled: "Đã hủy",
+    failed: "Giao thất bại",
+};
 
 export default function DeliveryOrdersTable() {
     const [data, setData] = useState<DeliveryOrder[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Simulate API call with mock data
-        setTimeout(() => {
-            setData(mockDeliveryOrders);
-            setLoading(false);
-        }, 500);
+        const load = async () => {
+            try {
+                const res = await DashboardService.getShipperOrderDeliveryDetail();
+                if (res.success && Array.isArray(res.data)) {
+                    const mapped = res.data.map((item: any) => ({
+                        key: item.orderNo || String(item.id),
+                        code: item.orderNo || `#${item.id}`,
+                        shipper: item.shipper || "-",
+                        supervisor: item.supervisor || "-",
+                        status: STATUS_MAP[item.deliveryStatus] || item.deliveryStatus || "Đã phân công",
+                    }));
+                    setData(mapped);
+                }
+            } catch {
+                setData([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
     }, []);
 
     if (loading) {
@@ -66,8 +82,8 @@ export default function DeliveryOrdersTable() {
                         <Text style={[styles.badgeText, { color: sc.text }]}>{item.status}</Text>
                     </View>
                 </View>
-                <Text style={styles.customer}>{item.customer}</Text>
-                <Text style={styles.address} numberOfLines={1}>📍 {item.address}</Text>
+                <Text style={styles.shipper}>Shipper: {item.shipper}</Text>
+                <Text style={styles.supervisor}>Giám sát: {item.supervisor}</Text>
             </View>
         );
     };
@@ -110,6 +126,6 @@ const styles = StyleSheet.create({
     orderCode: { fontSize: 13, fontWeight: "700", color: "#1890ff" },
     badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
     badgeText: { fontSize: 11, fontWeight: "600" },
-    customer: { fontSize: 12, fontWeight: "500", color: "#1a1a2e", marginBottom: 2 },
-    address: { fontSize: 11, color: "#8c8c8c" },
+    shipper: { fontSize: 12, fontWeight: "500", color: "#1a1a2e", marginBottom: 2 },
+    supervisor: { fontSize: 11, color: "#8c8c8c" },
 });

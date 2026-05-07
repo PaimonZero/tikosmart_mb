@@ -380,6 +380,19 @@ const getOrderDeliveryDetail = async (params?: DashboardParams) => {
   }
 };
 
+const getShipperOrderDeliveryDetail = async (params?: DashboardParams) => {
+  try {
+    const response = await apiClient.get(
+      "/dashboard/shipper/order-delivery-detail",
+      { params },
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching shipper order delivery details:", error);
+    throw error;
+  }
+};
+
 const DashboardService = {
   getAdminStats,
   getAdminOrderStatus,
@@ -412,6 +425,7 @@ const DashboardService = {
   getCustomerTransactions,
 
   getShipperStats,
+  getShipperOrderDeliveryDetail,
 
   getSupShipperStats,
   getOrderDelivery,

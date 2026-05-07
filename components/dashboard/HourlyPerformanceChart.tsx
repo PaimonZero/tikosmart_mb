@@ -1,12 +1,51 @@
-import React from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
-import { hourlyPerformance } from "@/store/dashboardRoleSlices";
+import DashboardService from "@/services/dashboardService";
 
 const screenWidth = Dimensions.get("window").width - 32;
 
+interface HourlyItem {
+    time: string;
+    done: number;
+}
+
 export default function HourlyPerformanceChart() {
-    const data = hourlyPerformance;
+    const [data, setData] = useState<HourlyItem[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                // Placeholder: no dedicated hourly performance API exists yet
+                // When available, replace with real API call
+                setData([]);
+            } catch {
+                setData([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    if (loading) {
+        return (
+            <View style={styles.card}>
+                <Text style={styles.title}>Hiệu suất soạn hàng theo giờ</Text>
+                <View style={styles.center}><ActivityIndicator size="small" color="#1890ff" /></View>
+            </View>
+        );
+    }
+
+    if (!data.length) {
+        return (
+            <View style={styles.card}>
+                <Text style={styles.title}>Hiệu suất soạn hàng theo giờ</Text>
+                <View style={styles.center}><Text style={styles.empty}>Không có dữ liệu</Text></View>
+            </View>
+        );
+    }
 
     const chartData = data.map((d) => ({
         value: d.done,
@@ -59,4 +98,6 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     title: { fontSize: 15, fontWeight: "700", marginBottom: 16, color: "#1a1a2e" },
+    center: { height: 120, justifyContent: "center", alignItems: "center" },
+    empty: { color: "#999", fontSize: 13 },
 });

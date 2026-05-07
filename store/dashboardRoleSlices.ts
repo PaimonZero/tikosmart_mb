@@ -36,12 +36,27 @@ export const getMonthlyTransactionData = async (month: number, year: number) => 
     }
 };
 
-export const mockPaymentStatus = [
-    { type: "Đã thanh toán", value: 62, color: "#52c41a" },
-    { type: "Chờ thanh toán", value: 21, color: "#faad14" },
-    { type: "Đã hủy", value: 9, color: "#f5222d" },
-    { type: "Hoàn tiền", value: 8, color: "#722ed1" },
-];
+export const getPaymentStatusData = async () => {
+    try {
+        const res = await DashboardService.getCustomerTransactions();
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const statusMap: Record<string, { label: string; color: string }> = {
+                paid: { label: "Đã thanh toán", color: "#52c41a" },
+                pending: { label: "Chờ thanh toán", color: "#faad14" },
+                cancelled: { label: "Đã hủy", color: "#f5222d" },
+                refunded: { label: "Hoàn tiền", color: "#722ed1" },
+            };
+            return res.data.map((item: any) => ({
+                type: statusMap[item.status]?.label || item.status,
+                value: item.count || item.totalAmount || 0,
+                color: statusMap[item.status]?.color || "#8c8c8c",
+            }));
+        }
+        throw new Error("Invalid");
+    } catch {
+        return [];
+    }
+};
 
 // ============================================================
 // MANAGER
@@ -115,13 +130,7 @@ export const getPickerKpiData = async () => {
     }
 };
 
-export const hourlyPerformance = [
-    { time: "08:00", done: 1 },
-    { time: "09:00", done: 3 },
-    { time: "10:00", done: 5 },
-    { time: "11:00", done: 2 },
-    { time: "12:00", done: 1 },
-];
+
 
 // ============================================================
 // SELLER
@@ -165,7 +174,7 @@ export const getShipperKpiData = async () => {
         }
         throw new Error("Invalid");
     } catch {
-        return { totalAssignedToday: 4, deliveredSuccess: 3, delivering: 0, lateOrders: 0, failedOrReturn: 0 };
+        return { totalAssignedToday: 0, deliveredSuccess: 0, delivering: 0, lateOrders: 0, failedOrReturn: 0 };
     }
 };
 

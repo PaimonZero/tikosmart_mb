@@ -1,4 +1,4 @@
-﻿import DashboardService from "@/services/dashboardService";
+import DashboardService from "@/services/dashboardService";
 
 // Admin dashboard data fetching functions
 
@@ -38,7 +38,7 @@ export const getKpiData = async () => {
             return {
                 totalUsers: data.total_users ?? 0,
                 totalOrders: data.total_orders ?? 0,
-                totalRevenue: 125600,
+                totalRevenue: data.total_revenue ?? 0,
                 totalProducts: data.total_products ?? 0,
                 totalCustomer: data.total_customers ?? 0,
                 totalSuppliers: data.total_suppliers ?? 0,
@@ -57,7 +57,7 @@ export const getKpiData = async () => {
         return {
             totalUsers: 0,
             totalOrders: 0,
-            totalRevenue: 125600,
+            totalRevenue: 0,
             totalProducts: 0,
             totalCustomer: 0,
             totalSuppliers: 0,
