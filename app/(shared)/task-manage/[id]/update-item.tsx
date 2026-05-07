@@ -14,6 +14,9 @@ import { uploadWatermarkedImages } from "@/services/uploadImageService";
 import { useAppDispatch } from "@/store/hooks";
 import { updateTaskItemByPicker } from "@/store/taskSlice";
 import { toast } from "sonner-native";
+import { verifyPickingImages } from "@/services/aiVisionService";
+import { getSystemSettings, SystemSetting } from "@/services/systemSettingsService";
+import AiValidationModal from "@/components/common/AiValidationModal";
 
 type ImageType = "preEvd" | "postEvd" | null;
 
@@ -48,8 +51,13 @@ export default function UpdateTaskItemScreen() {
     const [postEvd, setPostEvd] = useState<{ uri: string, meta: any }[]>(parseEvdParam(postEvdParam));
 
     const [isSaving, setIsSaving] = useState(false);
-
+    const [saveStatus, setSaveStatus] = useState<"idle" | "uploading" | "verifying" | "saving">("idle");
     const [currentMeta, setCurrentMeta] = useState({ capturedAt: "", latitude: "", longitude: "", accuracy: "", address: "" });
+
+    // AI Validation State
+    const [aiModalVisible, setAiModalVisible] = useState(false);
+    const [aiInvalidDetails, setAiInvalidDetails] = useState<any[]>([]);
+    const [pendingUpdateFn, setPendingUpdateFn] = useState<(() => Promise<void>) | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -96,7 +104,7 @@ export default function UpdateTaskItemScreen() {
     const takePhoto = async (type: "preEvd" | "postEvd") => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("Lỗi", "Cần quyền truy cập máy ảnh để chụp ảnh.");
+            toast.error("Lỗi", { description: "Cần quyền truy cập máy ảnh để chụp ảnh." });
             return;
         }
 
@@ -128,6 +136,7 @@ export default function UpdateTaskItemScreen() {
     const handleSave = async () => {
         if (!itemId || !id) return;
         setIsSaving(true);
+        setSaveStatus("uploading");
 
         try {
             const uploadList = async (items: { uri: string, meta: any }[]) => {
@@ -152,26 +161,74 @@ export default function UpdateTaskItemScreen() {
             const finalPreEvdUris = await uploadList(preEvd);
             const finalPostEvdUris = await uploadList(postEvd);
 
-            const payload: any = {
-                postQty: Number(postQty),
-                preEvd: finalPreEvdUris,
-                postEvd: finalPostEvdUris,
+            const executeSave = async (preUris: string[], postUris: string[]) => {
+                try {
+                    setIsSaving(true);
+                    setSaveStatus("saving");
+                    const payload: any = {
+                        postQty: Number(postQty),
+                        preEvd: preUris,
+                        postEvd: postUris,
+                    };
+
+                    await dispatch(updateTaskItemByPicker({
+                        taskId: id as string,
+                        itemId: itemId as string,
+                        data: payload,
+                    })).unwrap();
+
+                    toast.success("Thành công", { description: "Đã lưu cập nhật sản phẩm.", duration: 2000 });
+                    taskSignal.shouldRefresh = true;
+                    router.back();
+                } catch (error: any) {
+                    toast.error("Lỗi", { description: error?.message || "Lỗi lưu cập nhật.", duration: 2000 });
+                } finally {
+                    setIsSaving(false);
+                    setSaveStatus("idle");
+                }
             };
 
-            await dispatch(updateTaskItemByPicker({
-                taskId: id as string,
-                itemId: itemId as string,
-                data: payload,
-            })).unwrap();
+            // AI Verification
+            setSaveStatus("verifying");
+            const allUrls = [...finalPreEvdUris, ...finalPostEvdUris].filter(url => typeof url === 'string' && url.startsWith('http'));
 
-            toast.success("Thành công", { description: "Đã lưu cập nhật sản phẩm.", duration: 2000 });
-            taskSignal.shouldRefresh = true;
-            router.back();
+            if (allUrls.length > 0) {
+                try {
+                    // Check if AI picking is enabled in system settings
+                    const settingsRes = await getSystemSettings();
+                    const settings: SystemSetting[] = settingsRes?.data?.data || [];
+                    const isAiEnabled = settings.find(s => s.setting_key === 'ai_picking_enabled')?.setting_value === 'true';
+
+                    if (isAiEnabled) {
+                        const verifyRes = await verifyPickingImages(allUrls, 'picking');
+                        const resultData = verifyRes?.data?.data || verifyRes?.data || { isValid: true };
+                        const { isValid, details } = resultData;
+
+                        if (isValid === false) {
+                            const invalidImages = (details || []).filter((d: any) => d.isValid === false);
+                            setAiInvalidDetails(invalidImages);
+                            setPendingUpdateFn(() => () => executeSave(finalPreEvdUris, finalPostEvdUris));
+                            setAiModalVisible(true);
+                            setIsSaving(false);
+                            return;
+                        }
+                    } else {
+                        console.log("AI Picking is disabled by Admin, skipping verification.");
+                    }
+                } catch (error) {
+                    console.error("Lỗi khi xác thực ảnh bằng AI:", error);
+                }
+            }
+
+            await executeSave(finalPreEvdUris, finalPostEvdUris);
 
         } catch (error: any) {
             toast.error("Lỗi", { description: error?.message || "Lỗi lưu cập nhật.", duration: 2000 });
-        } finally {
             setIsSaving(false);
+            setSaveStatus("idle");
+        } finally {
+            // Only set idle if we're not waiting for AI modal or back nav
+            // Actually, back nav will unmount the screen anyway
         }
     };
 
@@ -268,7 +325,10 @@ export default function UpdateTaskItemScreen() {
                 >
                     <Save color="white" size={20} />
                     <Text className="text-white font-bold text-base ml-2">
-                        {isSaving ? "Đang lưu..." : "Lưu Thay Đổi"}
+                        {saveStatus === "idle" ? "Lưu Thay Đổi" : 
+                         saveStatus === "uploading" ? "Đang tải ảnh..." :
+                         saveStatus === "verifying" ? "AI đang kiểm tra..." :
+                         "Đang lưu..."}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -278,6 +338,32 @@ export default function UpdateTaskItemScreen() {
                 imageIndex={0}
                 visible={viewerVisible}
                 onRequestClose={() => setViewerVisible(false)}
+            />
+
+            <AiValidationModal
+                visible={aiModalVisible}
+                invalidImages={aiInvalidDetails}
+                context="picking"
+                onCancel={() => {
+                    setAiModalVisible(false);
+                    setIsSaving(false);
+                    setSaveStatus("idle");
+                    setPendingUpdateFn(null);
+                }}
+                onConfirm={async () => {
+                    const nextUpdateFn = pendingUpdateFn;
+                    setAiModalVisible(false);
+                    setPendingUpdateFn(null);
+                    
+                    if (nextUpdateFn) {
+                        setIsSaving(true);
+                        try {
+                            await nextUpdateFn();
+                        } finally {
+                            // executeSave inside nextUpdateFn already handles setIsSaving(false) and setSaveStatus("idle")
+                        }
+                    }
+                }}
             />
         </SafeAreaView>
     );

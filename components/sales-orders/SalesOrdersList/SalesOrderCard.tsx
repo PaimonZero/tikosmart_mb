@@ -16,7 +16,7 @@ export const SalesOrderCard = ({ order, onPress }: SalesOrderCardProps) => {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "draft":
-                return { label: "Phiếu tạm", badgeClass: "bg-gray-100", textClass: "text-gray-600", borderColor: "#9CA3AF" };
+                return { label: "Đơn nháp", badgeClass: "bg-gray-100", textClass: "text-gray-600", borderColor: "#9CA3AF" };
             case "pending_preparation":
                 return { label: "Chờ chuẩn bị", badgeClass: "bg-amber-100", textClass: "text-amber-700", borderColor: "#F59E0B" };
             case "assigned_preparation":
@@ -85,7 +85,7 @@ export const SalesOrderCard = ({ order, onPress }: SalesOrderCardProps) => {
                 {/* Customer */}
                 <View className="flex-row items-center mb-1">
                     <Ionicons name="person-circle-outline" size={18} color="#4B5563" />
-                    <Text className="text-sm text-gray-800 font-semibold ml-2 flex-1" numberOfLines={1}>
+                    <Text className="text-sm text-gray-800 font-semibold ml-2 flex-1 flex-wrap flex-shrink" numberOfLines={2}>
                         {order.customerName || "Khách hàng"}
                     </Text>
                 </View>

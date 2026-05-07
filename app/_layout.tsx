@@ -1,10 +1,9 @@
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { setAuthExpiredHandler } from "@/services/authSession";
 import { fetchCurrentUser, hydrateAuth, logout } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { store } from "@/store/store";
+import { fetchNotifications } from "@/store/notificationSlice";
 import {
-  DarkTheme,
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
@@ -13,7 +12,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PaperProvider } from "react-native-paper";
+import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import "react-native-reanimated";
 import { Provider } from "react-redux";
 import { Toaster } from "sonner-native";
@@ -28,17 +27,21 @@ import useSubscribeRooms from "@/hooks/useSubscribeRooms";
 import useProductEvents from "@/hooks/socket-events/useProductEvents";
 import usePreparationEvents from "@/hooks/socket-events/usePreparationEvents";
 import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
+import useDeliveryEvents from "@/hooks/socket-events/useDeliveryEvents";
+import useGlobalTracking from "@/hooks/useGlobalTracking";
+import useSessionGuard from "@/hooks/useSessionGuard";
+import "@/utils/locationTask";
+import VoiceAssistantFloatingButton from "@/components/voiceAssistant/VoiceAssistantFloatingButton";
 
 export const unstable_settings = {};
 
 // Keep splash screen visible while hydrating
 SplashScreen.preventAutoHideAsync();
 
-function RootLayoutInner() {
-  const colorScheme = useColorScheme();
+function NavigationContent() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, hasFetchedProfile, hasHydrated, user, token } =
+  const { isAuthenticated, hasFetchedProfile, hasHydrated, token } =
     useAppSelector((s) => s.auth);
   const [isSplashAnimationDone, setSplashAnimationDone] = React.useState(false);
     
@@ -50,13 +53,21 @@ function RootLayoutInner() {
   useProductEvents();
   usePreparationEvents();
   useFinanceAREvents();
+  useDeliveryEvents();
+  
+  // Global GPS tracking (auto-starts when shipper has active run)
+  useGlobalTracking();
+  
+  // Session guard: lắng nghe force_logout event
+  useSessionGuard();
   
   // Subscribe to basic rooms
   useSubscribeRooms([
     'room:sales_orders', 
     'room:inventory', 
     'room:preparation', 
-    'room:finance_ar'
+    'room:finance_ar',
+    'room:deliveries'
   ]);
 
   // Connect/Disconnect socket based on auth state
@@ -69,6 +80,7 @@ function RootLayoutInner() {
       }
     }
   }, [isAuthenticated, token, hasHydrated]);
+
   useEffect(() => {
     if (!hasHydrated) {
       void dispatch(hydrateAuth());
@@ -81,6 +93,11 @@ function RootLayoutInner() {
   useEffect(() => {
     if (hasHydrated && isAuthenticated && !hasFetchedProfile) {
       void dispatch(fetchCurrentUser());
+    }
+    
+    // Fetch initial notifications for the badge count
+    if (hasHydrated && isAuthenticated && hasFetchedProfile) {
+      dispatch(fetchNotifications({ limit: 15, offset: 0 }));
     }
   }, [hasHydrated, isAuthenticated, hasFetchedProfile, dispatch]);
 
@@ -95,7 +112,7 @@ function RootLayoutInner() {
   const isAppReady = hasHydrated && (!isAuthenticated || hasFetchedProfile);
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <>
       {!isSplashAnimationDone && (
         <CustomSplash 
           isAppReady={isAppReady} 
@@ -122,13 +139,15 @@ function RootLayoutInner() {
           }}
         />
       </Stack>
+      
+      <VoiceAssistantFloatingButton />
       <Toaster
-        position="top-center" // Vị trí: 'top-center', 'bottom-center', ...
-        richColors={true} // Khuyên dùng: Tự động tô màu Xanh (Success) / Đỏ (Error)
-        closeButton={true} // Tùy chọn: Hiện nút X để tắt nhanh
+        position="top-center"
+        richColors={true}
+        closeButton={true}
       />
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar style="dark" />
+    </>
   );
 }
 
@@ -136,8 +155,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <PaperProvider>
-          <RootLayoutInner />
+        <PaperProvider theme={MD3LightTheme}>
+          <ThemeProvider value={DefaultTheme}>
+            <NavigationContent />
+          </ThemeProvider>
         </PaperProvider>
       </Provider>
     </GestureHandlerRootView>

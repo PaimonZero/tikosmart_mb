@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 
 import apiClient from '@/services/apiClient';
+import { toast } from 'sonner-native';
 
 type AvatarUploaderRenderProps = {
 	pickAndUpload: () => Promise<void>;
@@ -64,7 +65,7 @@ export default function AvatarUploader({ onUploaded, onError, children }: Avatar
 		try {
 			const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
 			if (!perm.granted) {
-				Alert.alert('Quyền truy cập bị từ chối', 'Vui lòng cho phép truy cập Thư viện ảnh để tải ảnh lên.');
+				toast.error('Quyền truy cập bị từ chối', { description: 'Vui lòng cho phép truy cập Thư viện ảnh để tải ảnh lên.' });
 				return;
 			}
 
@@ -79,10 +80,7 @@ export default function AvatarUploader({ onUploaded, onError, children }: Avatar
 			await uploadAsset(result.assets?.[0]);
 		} catch (e) {
 			onError?.(e);
-			Alert.alert(
-				'Lỗi upload ảnh',
-				(e as any)?.response?.data?.message || (e as any)?.message || 'Không thể upload ảnh.'
-			);
+			toast.error('Lỗi upload ảnh', { description: (e as any)?.response?.data?.message || (e as any)?.message || 'Không thể upload ảnh.' });
 		} finally {
 			setIsUploading(false);
 		}
@@ -94,7 +92,7 @@ export default function AvatarUploader({ onUploaded, onError, children }: Avatar
 		try {
 			const perm = await ImagePicker.requestCameraPermissionsAsync();
 			if (!perm.granted) {
-				Alert.alert('Quyền truy cập bị từ chối', 'Vui lòng cho phép truy cập Camera để chụp ảnh.');
+				toast.error('Quyền truy cập bị từ chối', { description: 'Vui lòng cho phép truy cập Camera để chụp ảnh.' });
 				return;
 			}
 
@@ -109,10 +107,7 @@ export default function AvatarUploader({ onUploaded, onError, children }: Avatar
 			await uploadAsset(result.assets?.[0]);
 		} catch (e) {
 			onError?.(e);
-			Alert.alert(
-				'Lỗi chụp/upload ảnh',
-				(e as any)?.response?.data?.message || (e as any)?.message || 'Không thể chụp/upload ảnh.'
-			);
+			toast.error('Lỗi chụp/upload ảnh', { description: (e as any)?.response?.data?.message || (e as any)?.message || 'Không thể chụp/upload ảnh.' });
 		} finally {
 			setIsUploading(false);
 		}

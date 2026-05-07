@@ -10,6 +10,7 @@ export interface IssueParams {
 }
 
 export interface CreateIssueData {
+  title: string;
   isPublic?: boolean;
   type: string;
   severity: string;
@@ -27,6 +28,13 @@ export interface UpdateIssueData {
   description?: string;
   mediaUrl?: string;
   [key: string]: any;
+}
+
+export interface CreateSlaExceededIssueData {
+  description: string;
+  severity: string;
+  suggestedSla?: string;
+  extraTags?: string[];
 }
 
 export interface IssueCommentData {
@@ -156,4 +164,15 @@ export const updateIssueComment = (
  */
 export const deleteIssueComment = (issueId: string, commentId: string) => {
   return apiClient.delete(`/issues/${issueId}/comments/${commentId}`);
+};
+
+/**
+ * Tạo SLA Exceeded Issue và khóa đơn hàng
+ * @route POST /api/sales-orders/:id/sla-exceeded-issue
+ */
+export const createSlaExceededIssue = (
+  orderId: string,
+  data: CreateSlaExceededIssueData,
+) => {
+  return apiClient.post(`/sales-orders/${orderId}/sla-exceeded-issue`, data);
 };

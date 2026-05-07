@@ -2,6 +2,7 @@ import { responsiveHeight, responsiveWidth } from '@/assets/utils/responsive';
 import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
 import { Alert, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { toast } from 'sonner-native';
 // Import action set credentials từ slice của bạn (ví dụ)
 
 // Đảm bảo trình duyệt đóng lại khi quay về app (iOS)
@@ -21,7 +22,7 @@ export default function LoginGoogle() {
             await WebBrowser.openBrowserAsync(BACKEND_URL);
         } catch (error) {
             console.log("Error opening browser:", error);
-            Alert.alert("Lỗi", "Không thể mở trình duyệt");
+            toast.error("Lỗi", { description: "Không thể mở trình duyệt" });
         }
     };
 

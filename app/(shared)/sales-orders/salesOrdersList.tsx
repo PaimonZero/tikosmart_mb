@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 //'prepared','confirmed','delivering','delivered','completed','cancelled'
 const TABS: SalesOrderTabItem[] = [
     { key: "all", title: "Tất cả", status: "" },
-    { key: "draft", title: "Phiếu tạm", status: "draft" },
+    { key: "draft", title: "Đơn nháp", status: "draft" },
     { key: "pending_preparation", title: "Chờ chuẩn bị", status: "pending_preparation" },
     { key: "assigned_preparation", title: "Đang chuẩn bị", status: "assigned_preparation" },
     { key: "prepared", title: "Đã chuẩn bị", status: "prepared" },

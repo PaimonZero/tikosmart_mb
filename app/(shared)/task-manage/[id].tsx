@@ -2,7 +2,6 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import React, { useCallback, useRef, useState } from "react";
 import {
-    Alert,
     ScrollView,
     Text,
     TouchableOpacity,
@@ -12,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { taskSignal } from "@/services/taskSignal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { formatDateShortVN } from "@/utils/formatters";
 import { fetchInventoryLotById } from "@/store/inventoryLotSlice";
 import { fetchProductById } from "@/store/productSlice";
 import { fetchSalesOrderById } from "@/store/salesOrdersSlice";
@@ -26,15 +26,18 @@ import TaskReviewInfo from "@/components/task-manage/TaskDetail/TaskReviewInfo";
 import TaskProductList from "@/components/task-manage/TaskDetail/TaskProductList";
 import TaskTimeline from "@/components/task-manage/TaskDetail/TaskTimeline";
 import StatusBadge from "@/components/task-manage/TaskList/StatusBadge";
+import { toast } from "sonner-native";
 
 export default function TaskDetailScreen() {
-    const { id: taskIdParam } = useLocalSearchParams();
+    const { id: taskIdParam, voiceTab, voiceNonce } = useLocalSearchParams();
     const router = useRouter();
     const dispatch = useAppDispatch();
     const { user } = useAppSelector((state) => state.auth);
     const userRole = user?.role || "";
 
     const isFirstRun = useRef(true);
+    const scrollRef = useRef<ScrollView>(null);
+    const lastVoiceNonceRef = useRef<string | null>(null);
 
     // Access control hook
     const { canView, canCancelTask, canEdit } = useTaskPermission();
@@ -71,7 +74,7 @@ export default function TaskDetailScreen() {
             await fetchMissingInfo(items);
         } catch (error) {
             console.error("Failed to load task details", error);
-            Alert.alert("Lỗi", "Không thể tải chi tiết nhiệm vụ.");
+            toast.error("Lỗi", { description: "Không thể tải chi tiết nhiệm vụ." });
         } finally {
             setLoading(false);
         }
@@ -134,6 +137,23 @@ export default function TaskDetailScreen() {
 
     const isCancelled = (taskDetail as any)?.status === "cancelled" || (orderDetail as any)?.status === "cancelled";
 
+    React.useEffect(() => {
+        const nonce = typeof voiceNonce === "string" ? voiceNonce : "";
+        if (!nonce || lastVoiceNonceRef.current === nonce) return;
+        if (voiceTab !== "items") return;
+
+        lastVoiceNonceRef.current = nonce;
+        setTimeout(() => {
+            scrollRef.current?.scrollTo({ y: 560, animated: true });
+        }, 350);
+
+        const clearTimer = setTimeout(() => {
+            router.setParams({ voiceTab: undefined, voiceNonce: undefined } as any);
+        }, 1200);
+
+        return () => clearTimeout(clearTimer);
+    }, [router, voiceNonce, voiceTab]);
+
     if (!canView) return null;
 
     if (loading) {
@@ -172,7 +192,9 @@ export default function TaskDetailScreen() {
                         Mã nhiệm vụ:
                     </Text>
                     <View className="bg-blue-100 px-1.5 py-1 rounded ml-2 flex-shrink-0">
-                        <Text className="text-sm font-bold text-blue-600">#{taskData.id?.slice(0, 8) || "Không rõ"}</Text>
+                        <Text className="text-sm font-bold text-blue-600">
+                            #{taskData.dailySeq || '?'} - {formatDateShortVN(taskData.createdAt)}
+                        </Text>
                     </View>
                 </View>
                 <View className="ml-2 flex-row items-center gap-2">
@@ -180,7 +202,7 @@ export default function TaskDetailScreen() {
                 </View>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+            <ScrollView ref={scrollRef} className="flex-1" showsVerticalScrollIndicator={false}>
 
                 <TaskTimeline taskDetail={taskData} isCancelled={isCancelled} />
                 {taskData?.review && (

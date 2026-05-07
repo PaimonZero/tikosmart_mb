@@ -1,6 +1,7 @@
 import { Calendar, ClockAlert, User, Users } from 'lucide-react-native';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { formatDateShortVN } from '@/utils/formatters';
 import StatusBadge from './StatusBadge';
 
 interface TaskCardProps {
@@ -10,7 +11,9 @@ interface TaskCardProps {
 }
 
 const TaskCard = React.memo(({ task, userRole, onPress }: TaskCardProps) => {
-    const taskIdString = String(task?.id || '').slice(0, 8);
+    const dailySeq = task?.dailySeq || '?';
+    const dateLabel = formatDateShortVN(task?.createdAt);
+    const displayId = dateLabel ? `Nhiệm vụ ${dailySeq} - ${dateLabel}` : `Nhiệm vụ ${dailySeq}`;
     const orderNo = task?.salesOrder?.orderNo || '—';
     const customerName = task?.salesOrder?.customerName || '';
     const supervisorName = task?.supervisorName || 'Không có';
@@ -48,9 +51,14 @@ const TaskCard = React.memo(({ task, userRole, onPress }: TaskCardProps) => {
             className={`rounded-xl shadow-sm p-4 mb-3 mx-4 border ${isCancelled ? 'bg-gray-100 border-gray-200 opacity-70' : 'bg-white border-gray-300'}`}
         >
             {/* Header Row */}
-            <View className="flex-row justify-between items-center mb-2">
-                <View className="bg-blue-50 px-2 py-1 rounded">
-                    <Text className="text-sm font-bold text-blue-600">#{taskIdString}</Text>
+            <View className="flex-row justify-between items-center mb-3">
+                <View className="flex-row items-center">
+                    <View className="bg-blue-600 rounded-full w-8 h-8 items-center justify-center mr-2 shadow-sm">
+                        <Text className="text-white font-bold text-sm">#{dailySeq}</Text>
+                    </View>
+                    <View className="bg-blue-50 px-2 py-1 rounded">
+                        <Text className="text-sm font-bold text-blue-600">{displayId}</Text>
+                    </View>
                 </View>
                 <StatusBadge status={task?.status || ''} />
             </View>

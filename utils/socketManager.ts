@@ -14,6 +14,7 @@ export const socket: Socket = io(SOCKET_URL, {
 
 /**
  * Khởi tạo kết nối Socket.IO với JWT Token
+ * Mobile dùng auth.token (Bearer) vì React Native không auto-send cookie
  */
 export const connectSocket = (token: string) => {
   if (!token) {
@@ -35,11 +36,35 @@ export const connectSocket = (token: string) => {
   return socket;
 };
 
+// Đăng ký session platform sau khi connect (single-session enforcement)
+socket.on('connect', () => {
+  socket.emit('session:register', { platform: 'mobile' });
+});
+
 /**
  * Ngắt kết nối Socket.IO
  */
 export const disconnectSocket = () => {
   if (socket.connected) {
     socket.disconnect();
+  }
+};
+
+/**
+ * Gửi vị trí shipper lên server
+ */
+export type ShipperLocationPayload = {
+  runId?: string | number;
+  lat: number;
+  lng: number;
+  vehicle_type?: string;
+  timestamp?: string;
+};
+
+export const emitShipperLocation = (data: ShipperLocationPayload) => {
+  if (socket.connected) {
+    socket.emit('shipper_location_update', data);
+  } else {
+    // console.warn('[Socket] Không thể gửi vị trí: Chưa kết nối socket.');
   }
 };

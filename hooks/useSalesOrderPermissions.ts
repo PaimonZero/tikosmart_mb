@@ -10,7 +10,7 @@ const SALES_ORDER_PERMISSIONS = {
     "seller",
     "manager",
     "sup_picker",
-    "Delivery Supervisor", // Note: Ensure this matches the exact role string in your DB/Auth system
+    "sup_shipper", // Note: Ensure this matches the exact role string in your DB/Auth system
     "accountant",
   ],
   view_detail: [
@@ -18,7 +18,7 @@ const SALES_ORDER_PERMISSIONS = {
     "seller",
     "manager",
     "sup_picker",
-    "Delivery Supervisor",
+    "sup_shipper",
     "accountant",
   ],
   // Có thể thêm quyền edit, create, v.v. nếu cần sau này
