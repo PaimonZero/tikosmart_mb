@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { useCallback, useRef } from 'react';
+import { getCurrentLocationWithTimeout } from '../utils/locationHelper';
 import { LOCATION_TASK_NAME } from '@/utils/locationTask';
 import { useDispatch } from 'react-redux';
 import { updateShipperLocation } from '../store/deliveryRunsSlice';
@@ -179,27 +180,29 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
 
       // 6. Initial Force Update (Try-catch riêng để không làm chết flow tracking nếu chỉ lỗi lấy tọa độ tức thời)
       try {
-        const currentPos = await Location.getCurrentPositionAsync({ 
-          accuracy: Location.Accuracy.High,
-        });
+        const currentPos = await getCurrentLocationWithTimeout(3000, Location.Accuracy.High);
         
-        const locationData = {
-          runId,
-          lat: currentPos.coords.latitude,
-          lng: currentPos.coords.longitude,
-          vehicle_type: vehicle_type,
-          timestamp: new Date().toISOString()
-        };
+        if (currentPos) {
+          const locationData = {
+            runId,
+            lat: currentPos.coords.latitude,
+            lng: currentPos.coords.longitude,
+            vehicle_type: vehicle_type,
+            timestamp: new Date().toISOString()
+          };
 
-        emitShipperLocation(locationData);
-        dispatch(updateShipperLocation(locationData));
+          emitShipperLocation(locationData);
+          dispatch(updateShipperLocation(locationData));
 
-        // Seed the throttle state so the foreground watcher doesn't double-fire
-        lastEmitStateRef.current = {
-          time: Date.now(),
-          lat: currentPos.coords.latitude,
-          lng: currentPos.coords.longitude,
-        };
+          // Seed the throttle state so the foreground watcher doesn't double-fire
+          lastEmitStateRef.current = {
+            time: Date.now(),
+            lat: currentPos.coords.latitude,
+            lng: currentPos.coords.longitude,
+          };
+        } else {
+          console.warn('[Tracking] Initial position update returned null, skipping initial seed');
+        }
       } catch (posErr) {
         console.warn('[Tracking] Initial position update failed, but background task is registered:', posErr);
       }
@@ -239,17 +242,21 @@ export const useLocationTracking = (runId: string | number | null, vehicle_type?
   const forceUpdate = useCallback(async () => {
     if (!runId) return;
     try {
-      const currentPos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const locationData = {
-        runId,
-        lat: currentPos.coords.latitude,
-        lng: currentPos.coords.longitude,
-        vehicle_type: vehicle_type,
-        timestamp: new Date().toISOString()
-      };
+      const currentPos = await getCurrentLocationWithTimeout(3000, Location.Accuracy.High);
+      if (currentPos) {
+        const locationData = {
+          runId,
+          lat: currentPos.coords.latitude,
+          lng: currentPos.coords.longitude,
+          vehicle_type: vehicle_type,
+          timestamp: new Date().toISOString()
+        };
 
-      emitShipperLocation(locationData);
-      dispatch(updateShipperLocation(locationData));
+        emitShipperLocation(locationData);
+        dispatch(updateShipperLocation(locationData));
+      } else {
+        console.warn('[Tracking] Force update position returned null');
+      }
     } catch (err) {
       console.error('[Tracking] Force update failed:', err);
     }

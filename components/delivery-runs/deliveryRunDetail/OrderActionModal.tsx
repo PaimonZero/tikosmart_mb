@@ -10,6 +10,7 @@ import { verifyPickingImages } from '@/services/aiVisionService';
 import { getSystemSettings, SystemSetting } from '@/services/systemSettingsService';
 import AiValidationModal from '@/components/common/AiValidationModal';
 import * as Location from 'expo-location';
+import { getCurrentLocationWithTimeout } from '@/utils/locationHelper';
 
 interface OrderActionModalProps {
     visible: boolean;
@@ -67,6 +68,25 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
             setEvidenceImage(order.evdUrl || null);
             setIsSubmitting(false);
             setCaptureLocation(null);
+
+            // [Lớp bảo vệ 1]: Nạp vị trí lưu đệm (Pre-fetch cached location) ngay khi mở modal để chống đơ máy
+            (async () => {
+                try {
+                    const { status } = await Location.getForegroundPermissionsAsync();
+                    if (status === 'granted') {
+                        const cachedLocation = await Location.getLastKnownPositionAsync({});
+                        if (cachedLocation) {
+                            console.log('[OrderActionModal] Đã nạp sẵn vị trí lưu đệm:', cachedLocation.coords.latitude, cachedLocation.coords.longitude);
+                            setCaptureLocation({
+                                lat: cachedLocation.coords.latitude,
+                                lng: cachedLocation.coords.longitude
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[OrderActionModal] Lỗi nạp sẵn vị trí đệm:', err);
+                }
+            })();
         }
     }, [visible, type, order]);
 
@@ -104,15 +124,17 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
         if (!result.canceled) {
             setEvidenceImage(result.assets[0].uri);
             
-            // Lấy vị trí ngay khi chụp ảnh
+            // [Lớp bảo vệ 2]: Lấy vị trí ngay khi chụp ảnh bằng tiện ích giới hạn thời gian chờ 3 giây (Timeout)
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status === 'granted') {
-                    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-                    setCaptureLocation({
-                        lat: location.coords.latitude,
-                        lng: location.coords.longitude
-                    });
+                    const location = await getCurrentLocationWithTimeout(3000, Location.Accuracy.Balanced);
+                    if (location) {
+                        setCaptureLocation({
+                            lat: location.coords.latitude,
+                            lng: location.coords.longitude
+                        });
+                    }
                 }
             } catch (err) {
                 console.warn("Lỗi lấy vị trí khi chụp ảnh:", err);
@@ -264,13 +286,13 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                                         <TouchableOpacity
                                             onPress={() => setActualPay(order?.codAmount?.toString() || '0')}
                                             disabled={isSubmitting}
-                                            className="bg-green-50 px-3 rounded-2xl items-center justify-center border border-green-100 active:opacity-70"
+                                            activeOpacity={0.7} className="bg-green-50 px-3 rounded-2xl items-center justify-center border border-green-100"
                                         >
                                             <Text className="text-green-600 font-bold text-[10px] uppercase">Thu đủ</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={handleOpenQr}
-                                            className="bg-blue-600 w-14 rounded-2xl items-center justify-center shadow-sm active:opacity-80"
+                                            activeOpacity={0.8} className="bg-blue-600 w-14 rounded-2xl items-center justify-center shadow-sm"
                                         >
                                             <Ionicons name="qr-code" size={24} color="white" />
                                         </TouchableOpacity>
@@ -325,7 +347,7 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                                     <TouchableOpacity
                                         onPress={pickImage}
                                         disabled={isSubmitting}
-                                        className="w-full aspect-video bg-blue-50 rounded-2xl items-center justify-center border border-dashed border-blue-200 active:bg-blue-100"
+                                        activeOpacity={0.7} className="w-full aspect-video bg-blue-50 rounded-2xl items-center justify-center border border-dashed border-blue-200"
                                     >
                                         <View className="bg-blue-100 p-4 rounded-full mb-2">
                                             <Ionicons name="camera" size={32} color="#3B82F6" />

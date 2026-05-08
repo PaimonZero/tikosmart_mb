@@ -58,7 +58,7 @@ export const QrPaymentModal = ({ visible, onClose, orderNo, amount }: QrPaymentM
                                 </View>
                                 <TouchableOpacity
                                     onPress={onClose}
-                                    className="bg-white/10 w-10 h-10 rounded-2xl items-center justify-center border border-white/20 active:bg-white/20"
+                                    activeOpacity={0.7} className="bg-white/10 w-10 h-10 rounded-2xl items-center justify-center border border-white/20"
                                 >
                                     <Ionicons name="close" size={24} color="white" />
                                 </TouchableOpacity>
@@ -112,7 +112,7 @@ export const QrPaymentModal = ({ visible, onClose, orderNo, amount }: QrPaymentM
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleCopy(bankAccount, "số tài khoản")}
-                                        className="bg-blue-600 w-10 h-10 rounded-xl items-center justify-center shadow-lg active:scale-95"
+                                        activeOpacity={0.7} className="bg-blue-600 w-10 h-10 rounded-xl items-center justify-center shadow-lg"
                                     >
                                         <Feather name="copy" size={18} color="white" />
                                     </TouchableOpacity>
@@ -135,7 +135,7 @@ export const QrPaymentModal = ({ visible, onClose, orderNo, amount }: QrPaymentM
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleCopy(description, "nội dung")}
-                                        className="bg-slate-200 w-10 h-10 rounded-xl items-center justify-center active:scale-95"
+                                        activeOpacity={0.7} className="bg-slate-200 w-10 h-10 rounded-xl items-center justify-center"
                                     >
                                         <Feather name="copy" size={18} color="#1E293B" />
                                     </TouchableOpacity>
@@ -144,7 +144,7 @@ export const QrPaymentModal = ({ visible, onClose, orderNo, amount }: QrPaymentM
 
                             <TouchableOpacity
                                 onPress={onClose}
-                                className="mt-10 mb-2 py-4 bg-slate-900 rounded-2xl items-center shadow-xl active:scale-[0.98]"
+                                activeOpacity={0.9} className="mt-10 mb-2 py-4 bg-slate-900 rounded-2xl items-center shadow-xl"
                             >
                                 <Text className="text-white font-black uppercase tracking-widest text-sm">Xác nhận đã nhận tiền</Text>
                             </TouchableOpacity>

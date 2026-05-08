@@ -3,6 +3,19 @@ import { fetchCurrentUser, hydrateAuth, logout } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { store } from "@/store/store";
 import { fetchNotifications } from "@/store/notificationSlice";
+
+// Safe global JSON.stringify patch to catch recursive serialization errors in third-party logger utilities (like NativeWind warning parser)
+if (__DEV__) {
+  const originalStringify = JSON.stringify;
+  JSON.stringify = function (value: any, replacer?: any, space?: any) {
+    try {
+      return originalStringify(value, replacer, space);
+    } catch (e) {
+      return '"[Unserializable Object]"';
+    }
+  };
+}
+
 import {
   DefaultTheme,
   ThemeProvider,

@@ -13,6 +13,7 @@ import FloatingRunInfoCard from '../../../components/delivery-runs/deliveryRunDe
 import OrderDetailItem from '../../../components/delivery-runs/deliveryRunDetail/OrderDetailItem';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import * as Location from 'expo-location';
+import { getCurrentLocationWithTimeout } from '../../../utils/locationHelper';
 import { StartTripModal } from '../../../components/delivery-runs/deliveryRunDetail/StartTripModal';
 import { DeliveryRunActionButtons } from '../../../components/delivery-runs/deliveryRunDetail/DeliveryRunActionButtons';
 import { Divider } from 'react-native-paper';
@@ -155,20 +156,22 @@ export default function DeliveryRunDetailScreen() {
                 const { status } = await Location.getForegroundPermissionsAsync();
                 if (status !== 'granted') return;
 
-                const position = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced,
-                });
+                const position = await getCurrentLocationWithTimeout(3000, Location.Accuracy.Balanced);
 
-                const locationData = {
-                    runId: id,
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    vehicle_type: run?.vehicle_type,
-                    timestamp: new Date().toISOString(),
-                };
+                if (position) {
+                    const locationData = {
+                        runId: id,
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        vehicle_type: run?.vehicle_type,
+                        timestamp: new Date().toISOString(),
+                    };
 
-                dispatch(updateShipperLocation(locationData));
-                emitShipperLocation(locationData);
+                    dispatch(updateShipperLocation(locationData));
+                    emitShipperLocation(locationData);
+                } else {
+                    console.warn("[GPS Sync] Proactive position returned null");
+                }
             } catch (err) {
                 console.warn("[GPS Sync] Proactive update failed:", err);
             }
@@ -220,13 +223,15 @@ export default function DeliveryRunDetailScreen() {
 
             if (status === 'granted') {
                 try {
-                    const location = await Location.getCurrentPositionAsync({
-                        accuracy: Location.Accuracy.Balanced,
-                    });
-                    gpsData = {
-                        shipper_lat: location.coords.latitude,
-                        shipper_lng: location.coords.longitude,
-                    };
+                    const location = await getCurrentLocationWithTimeout(3000, Location.Accuracy.Balanced);
+                    if (location) {
+                        gpsData = {
+                            shipper_lat: location.coords.latitude,
+                            shipper_lng: location.coords.longitude,
+                        };
+                    } else {
+                        console.warn("Failed to get location (returned null), proceeding without GPS");
+                    }
                 } catch (e) {
                     console.warn("Failed to get location, proceeding without GPS", e);
                 }
@@ -343,7 +348,8 @@ export default function DeliveryRunDetailScreen() {
             >
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg active:bg-slate-50 border border-slate-100 mt-1.5"
+                    activeOpacity={0.7}
+                    className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg border border-slate-100 mt-1.5"
                 >
                     <Ionicons name="chevron-back" size={28} color="#1E293B" />
                 </TouchableOpacity>
