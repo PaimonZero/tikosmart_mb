@@ -68,7 +68,8 @@ export function ConfirmDialog({
                             <TouchableOpacity
                                 onPress={onDismiss}
                                 disabled={isLoading}
-                                className="flex-1 py-3.5 bg-gray-100 rounded-xl items-center justify-center active:bg-gray-200"
+                                activeOpacity={0.7}
+                                className="flex-1 py-3.5 bg-gray-100 rounded-xl items-center justify-center"
                             >
                                 <Text className="text-gray-700 font-semibold text-base">
                                     {cancelLabel}

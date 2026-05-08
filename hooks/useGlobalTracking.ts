@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { AppState } from "react-native";
 import * as Location from "expo-location";
+import { getCurrentLocationWithTimeout } from "@/utils/locationHelper";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { updateShipperLocation } from "@/store/deliveryRunsSlice";
@@ -237,23 +238,25 @@ const useGlobalTracking = () => {
 
         // ── Initial Force Update ──
         try {
-          const pos = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
-          const data = {
-            runId,
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            vehicle_type: vehicleType,
-            timestamp: new Date().toISOString(),
-          };
-          dispatch(updateShipperLocation(data));
-          emitShipperLocation(data);
-          lastEmitRef.current = {
-            time: Date.now(),
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          };
+          const pos = await getCurrentLocationWithTimeout(3000, Location.Accuracy.High);
+          if (pos) {
+            const data = {
+              runId,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              vehicle_type: vehicleType,
+              timestamp: new Date().toISOString(),
+            };
+            dispatch(updateShipperLocation(data));
+            emitShipperLocation(data);
+            lastEmitRef.current = {
+              time: Date.now(),
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            };
+          } else {
+            console.warn("[GlobalTracking] Initial position update returned null");
+          }
         } catch (posErr) {
           console.warn("[GlobalTracking] Initial position failed:", posErr);
         }
