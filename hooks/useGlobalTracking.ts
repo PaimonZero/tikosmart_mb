@@ -115,7 +115,9 @@ const useGlobalTracking = () => {
       activeVehicleRef.current = undefined;
       lastEmitRef.current = { time: 0, lat: null, lng: null };
     } catch (err: any) {
-      if (!err.message?.includes("Task not found")) {
+      const msg = err.message || "";
+      // Suppress "Task not found" errors as they are expected when tracking hasn't started
+      if (!msg.includes("Task not found") && !msg.includes("TaskNotFoundException")) {
         console.error("[GlobalTracking] Stop error:", err);
       }
     }
@@ -153,8 +155,13 @@ const useGlobalTracking = () => {
         if (bgStatus === "granted") {
           const isTaskRunning =
             await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-          if (isTaskRunning)
-            await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+          if (isTaskRunning) {
+            try {
+              await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+            } catch (stopErr) {
+              // Ignore stop errors here
+            }
+          }
 
           await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
             accuracy: Location.Accuracy.High,

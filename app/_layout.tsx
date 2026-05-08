@@ -29,6 +29,7 @@ import usePreparationEvents from "@/hooks/socket-events/usePreparationEvents";
 import useFinanceAREvents from "@/hooks/socket-events/useFinanceAREvents";
 import useDeliveryEvents from "@/hooks/socket-events/useDeliveryEvents";
 import useGlobalTracking from "@/hooks/useGlobalTracking";
+import useSessionGuard from "@/hooks/useSessionGuard";
 import "@/utils/locationTask";
 import VoiceAssistantFloatingButton from "@/components/voiceAssistant/VoiceAssistantFloatingButton";
 
@@ -37,7 +38,7 @@ export const unstable_settings = {};
 // Keep splash screen visible while hydrating
 SplashScreen.preventAutoHideAsync();
 
-function RootLayoutInner() {
+function NavigationContent() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isAuthenticated, hasFetchedProfile, hasHydrated, token } =
@@ -56,6 +57,9 @@ function RootLayoutInner() {
   
   // Global GPS tracking (auto-starts when shipper has active run)
   useGlobalTracking();
+  
+  // Session guard: lắng nghe force_logout event
+  useSessionGuard();
   
   // Subscribe to basic rooms
   useSubscribeRooms([
@@ -76,6 +80,7 @@ function RootLayoutInner() {
       }
     }
   }, [isAuthenticated, token, hasHydrated]);
+
   useEffect(() => {
     if (!hasHydrated) {
       void dispatch(hydrateAuth());
@@ -107,7 +112,7 @@ function RootLayoutInner() {
   const isAppReady = hasHydrated && (!isAuthenticated || hasFetchedProfile);
 
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <>
       {!isSplashAnimationDone && (
         <CustomSplash 
           isAppReady={isAppReady} 
@@ -134,14 +139,15 @@ function RootLayoutInner() {
           }}
         />
       </Stack>
-      <Toaster
-        position="top-center" // Vị trí: 'top-center', 'bottom-center', ...
-        richColors={true} // Khuyên dùng: Tự động tô màu Xanh (Success) / Đỏ (Error)
-        closeButton={true} // Tùy chọn: Hiện nút X để tắt nhanh
-      />
+      
       <VoiceAssistantFloatingButton />
+      <Toaster
+        position="top-center"
+        richColors={true}
+        closeButton={true}
+      />
       <StatusBar style="dark" />
-    </ThemeProvider>
+    </>
   );
 }
 
@@ -150,7 +156,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <PaperProvider theme={MD3LightTheme}>
-          <RootLayoutInner />
+          <ThemeProvider value={DefaultTheme}>
+            <NavigationContent />
+          </ThemeProvider>
         </PaperProvider>
       </Provider>
     </GestureHandlerRootView>

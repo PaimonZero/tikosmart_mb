@@ -6,6 +6,10 @@ import { ActivityIndicator, Image, Modal, Text, TextInput, TouchableOpacity, Vie
 import ImageView from "react-native-image-viewing";
 import { toast } from 'sonner-native';
 import { QrPaymentModal } from './QrPaymentModal';
+import { verifyPickingImages } from '@/services/aiVisionService';
+import { getSystemSettings, SystemSetting } from '@/services/systemSettingsService';
+import AiValidationModal from '@/components/common/AiValidationModal';
+import * as Location from 'expo-location';
 
 interface OrderActionModalProps {
     visible: boolean;
@@ -36,6 +40,13 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
     const lastVoiceNonceRef = React.useRef<string | null>(null);
 
+    // AI Validation State
+    const [aiModalVisible, setAiModalVisible] = useState(false);
+    const [aiInvalidDetails, setAiInvalidDetails] = useState<any[]>([]);
+    const [pendingSubmitFn, setPendingSubmitFn] = useState<(() => Promise<void>) | null>(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [captureLocation, setCaptureLocation] = useState<{ lat: number; lng: number } | null>(null);
+
     const isLocked = order?.status === 'completed' || order?.status === 'cancelled';
     const isAuthorized = (type === 'complete' && (userRole === 'shipper' || userRole === 'sup_shipper')) ||
         (type === 'cancel' && userRole === 'admin');
@@ -55,6 +66,7 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
 
             setEvidenceImage(order.evdUrl || null);
             setIsSubmitting(false);
+            setCaptureLocation(null);
         }
     }, [visible, type, order]);
 
@@ -91,6 +103,20 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
 
         if (!result.canceled) {
             setEvidenceImage(result.assets[0].uri);
+            
+            // Lấy vị trí ngay khi chụp ảnh
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                    setCaptureLocation({
+                        lat: location.coords.latitude,
+                        lng: location.coords.longitude
+                    });
+                }
+            } catch (err) {
+                console.warn("Lỗi lấy vị trí khi chụp ảnh:", err);
+            }
         }
     };
 
@@ -128,7 +154,57 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                 if (evdUrl) submitData.evdUrl = evdUrl;
             }
 
-            await onSubmit(submitData);
+            const executeFinalSubmit = async (finalEvdUrl?: string) => {
+                const finalData = { ...submitData };
+                if (finalEvdUrl) finalData.evdUrl = finalEvdUrl;
+                await onSubmit(finalData);
+            };
+
+            // 3. AI Verification
+            if (type === 'complete' && evdUrl) {
+                setIsVerifying(true);
+                try {
+                    const locationParams: any = {};
+                    if (captureLocation) {
+                        locationParams.captureLocation = captureLocation;
+                    }
+                    if (order?.customer?.lat && order?.customer?.lng) {
+                        locationParams.targetLocation = {
+                            lat: Number(order.customer.lat),
+                            lng: Number(order.customer.lng)
+                        };
+                    }
+
+                    // 3. AI Verification
+                    const settingsRes = await getSystemSettings();
+                    const settings: SystemSetting[] = settingsRes?.data?.data || [];
+                    const isAiEnabled = settings.find(s => s.setting_key === 'ai_delivery_enabled')?.setting_value === 'true';
+
+                    if (isAiEnabled) {
+                        const verifyRes = await verifyPickingImages([evdUrl], 'delivery', locationParams);
+                        const resultData = verifyRes?.data?.data || verifyRes?.data || { isValid: true };
+                        
+                        if (resultData.isValid === false) {
+                            const invalidImages = (resultData.details || []).filter((d: any) => d.isValid === false);
+                            setAiInvalidDetails(invalidImages);
+                            setPendingSubmitFn(() => () => executeFinalSubmit(evdUrl));
+                            setAiModalVisible(true);
+                            setIsVerifying(false);
+                            setIsSubmitting(false);
+                            return;
+                        }
+                    } else {
+                        console.log("AI Delivery is disabled by Admin, skipping verification.");
+                    }
+                } catch (error) {
+                    console.error("Lỗi khi xác thực ảnh bằng AI:", error);
+                    // AI lỗi thì bỏ qua, cho lưu bình thường
+                } finally {
+                    setIsVerifying(false);
+                }
+            }
+
+            await executeFinalSubmit(evdUrl);
         } catch (err) {
             // Error handling is usually done in the parent via onSubmit or here
             console.error("Submit failed:", err);
@@ -234,7 +310,10 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                                     </TouchableOpacity>
                                     {!isSubmitting && !isReadOnly && (
                                         <TouchableOpacity
-                                            onPress={() => setEvidenceImage(null)}
+                                            onPress={() => {
+                                                setEvidenceImage(null);
+                                                setCaptureLocation(null);
+                                            }}
                                             className="absolute top-2 right-2 bg-black/50 w-8 h-8 rounded-full items-center justify-center"
                                         >
                                             <Ionicons name="close" size={20} color="white" />
@@ -287,13 +366,45 @@ export const OrderActionModal = ({ visible, type, userRole, order, voicePrefill,
                                 {isSubmitting ? (
                                     <ActivityIndicator color="white" />
                                 ) : (
-                                    <Text className="text-white font-black">Xác nhận</Text>
+                                    <Text className="text-white font-black">
+                                        {isVerifying ? "AI đang kiểm tra..." : "Xác nhận"}
+                                    </Text>
                                 )}
                             </TouchableOpacity>
                         )}
                     </View>
                 </View>
             </View>
+
+            <AiValidationModal
+                visible={aiModalVisible}
+                invalidImages={aiInvalidDetails}
+                context="delivery"
+                onCancel={() => {
+                    setAiModalVisible(false);
+                    setIsSubmitting(false);
+                    setPendingSubmitFn(null);
+                    setAiInvalidDetails([]);
+                    setCaptureLocation(null);
+                }}
+                onConfirm={async () => {
+                    const nextSubmitFn = pendingSubmitFn;
+                    setAiModalVisible(false);
+                    setPendingSubmitFn(null);
+                    setAiInvalidDetails([]);
+                    
+                    if (nextSubmitFn) {
+                        setIsSubmitting(true);
+                        try {
+                            await nextSubmitFn();
+                        } catch (err) {
+                            console.error("AI Bypass submit failed:", err);
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    }
+                }}
+            />
 
             <QrPaymentModal
                 visible={qrVisible}

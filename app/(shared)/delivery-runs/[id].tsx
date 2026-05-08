@@ -2,7 +2,7 @@ import { AppDispatch, RootState } from '@/store/store';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, LayoutAnimation, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -203,13 +203,13 @@ export default function DeliveryRunDetailScreen() {
         setIsHeaderExpanded(!isHeaderExpanded);
     };
 
-    const onRefresh = async () => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         if (id) {
             await dispatch(fetchDeliveryRunById(id));
         }
         setRefreshing(false);
-    };
+    }, [id, dispatch]);
 
     const handleStartTrip = async (data: { vehicle_type: 'motorcycle' | 'car'; avoid_toll: boolean }) => {
         setIsStarting(true);
